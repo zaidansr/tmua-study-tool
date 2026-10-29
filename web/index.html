@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#edf4ee">
+  <meta name="description" content="Practise official TMUA past-paper questions individually, check your answers and study the original worked solutions.">
+  <title>TMUA Question Bank</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to questions</a>
+  <header class="site-header">
+    <a class="brand" href="#" aria-label="TMUA question bank home"><span class="brand-mark" aria-hidden="true">∴</span><span>TMUA<span class="brand-sub">desktop question bank</span></span></a>
+    <nav class="nav" aria-label="Main navigation"><button class="nav-link active" id="practice-tab" type="button">Practice</button><button class="nav-link" id="sources-tab" type="button">Papers & sources</button></nav>
+  </header>
+  <div id="loading" class="loading-state" role="status"><p>Loading questions…</p></div>
+  <main id="setup" class="loading-state" hidden>
+    <h1>Download the papers</h1>
+    <p>Download 45 original official PDFs for personal study. Once downloaded, questions and worked solutions work offline.</p>
+    <p>This independent free app stores the papers and your progress on this computer.</p>
+    <button id="download-papers" class="button primary" type="button">Download official papers</button>
+    <progress id="download-progress" value="0" max="45" hidden aria-label="Paper download progress"></progress>
+    <p id="download-status" role="status"></p>
+    <p><a href="https://esat-tmua.ac.uk/website-terms-of-use/" target="_blank" rel="noopener noreferrer">Publisher terms</a> · <a href="https://esat-tmua.ac.uk/tmua-preparation-materials/" target="_blank" rel="noopener noreferrer">Official archive</a></p>
+  </main>
+  <div id="error" class="loading-state" hidden role="alert"><h1>The question bank couldn’t load.</h1><p id="error-detail"></p><button class="button primary" type="button" onclick="location.reload()">Try again</button></div>
+  <div id="app" hidden>
+    <div class="app-layout" id="practice-view">
+      <aside class="sidebar" aria-label="Question filters and question list">
+        <div class="sidebar-heading"><span class="sidebar-label">Filters</span><button id="clear-filters" class="text-button" type="button">Clear filters</button></div>
+        <label class="search-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><input id="search" type="search" placeholder="Year, topic or question number…" aria-label="Search year, topic or question number"></label>
+        <button id="mobile-filter-toggle" class="mobile-filter-toggle" type="button" aria-expanded="false" aria-controls="paper-filter year-filter topic-filter status-filter question-list">Filters & question list <span aria-hidden="true">⌄</span></button>
+        <fieldset class="paper-filters"><legend>Paper</legend><div class="segmented" id="paper-filter"><button class="selected" data-paper="all" type="button" aria-pressed="true">Both</button><button data-paper="1" type="button" aria-pressed="false">Paper 1</button><button data-paper="2" type="button" aria-pressed="false">Paper 2</button></div></fieldset>
+        <label class="filter-label" for="year-filter">Year<select id="year-filter"><option value="all">All years</option></select></label>
+        <label class="filter-label" for="topic-filter">Topic<select id="topic-filter"><option value="all">All topics</option></select></label>
+        <label class="filter-label" for="status-filter">Progress<select id="status-filter"><option value="all">All questions</option><option value="unattempted">Not attempted</option><option value="correct">Correct</option><option value="incorrect">To revisit</option><option value="bookmarked">Bookmarked</option></select></label>
+        <div class="results-heading"><h2>Questions <span id="result-count">0</span></h2><span class="subtle" id="result-page"></span></div>
+        <div id="question-list" class="question-list" aria-label="Matching questions"></div>
+        <div class="list-pagination"><button id="list-prev" class="small-button" type="button" aria-label="Previous page of questions">←</button><span id="list-page-label"></span><button id="list-next" class="small-button" type="button" aria-label="Next page of questions">→</button></div>
+        <div class="local-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 4h14v15H5zM8 4v6h8V4M8 19v-5h8v5"/></svg><span>Progress stays in this app.<br><button id="reset-progress" class="text-button" type="button">Reset progress</button></span></div>
+      </aside>
+      <main id="main" class="main-content" tabindex="-1">
+        <h1 class="sr-only">Questions</h1>
+        <div class="bank-summary"><span><strong id="total-count">—</strong> questions</span><span><strong id="paper-count">—</strong> papers</span><span><strong id="attempted-count">0</strong> attempted</span><button class="text-button source-shortcut" id="source-shortcut" type="button">About the archive ↗</button></div>
+        <section id="question-workspace" aria-label="Current question" tabindex="-1"></section>
+        <div id="empty-state" class="empty-state" hidden><span aria-hidden="true">⌕</span><h2>No matching questions</h2><p>Try another topic, a different year or a shorter search.</p><button id="empty-clear" class="button" type="button">Clear filters</button></div>
+      </main>
+    </div>
+    <main id="sources-view" class="sources-content" hidden tabindex="-1">
+      <h1>Papers &amp; solutions</h1>
+      <div class="source-callout"><span class="source-icon" aria-hidden="true">↗</span><div><h2>Official TMUA preparation materials</h2><p id="coverage-note"></p><a id="official-source" href="https://esat-tmua.ac.uk/tmua-preparation-materials/" target="_blank" rel="noopener noreferrer">Visit UAT-UK’s archive ↗</a></div></div>
+      <div class="archive-heading"><h2>Browse the papers</h2><span id="archive-count" class="subtle"></span></div><div id="paper-library" class="paper-library"></div>
+      <section class="interactive-samples" aria-labelledby="samples-heading"><h2 id="samples-heading">Official interactive samples</h2><p>These Pearson VUE samples require internet access and open in your browser. They sit outside the offline PDF archive.</p><div class="sample-links"><a class="button" href="https://www.pearsonvue.com/us/en/redirects/uatuk/tmua-sample1.html" target="_blank" rel="noopener noreferrer">Specimen & explained answers ↗</a><a class="button" href="https://www.pearsonvue.com/us/en/redirects/uatuk/tmua-sample2.html" target="_blank" rel="noopener noreferrer">Sample test ↗</a></div></section>
+      <div class="source-footnote"><p>Questions and worked solutions are from the official UAT-UK archive, originally published by Cambridge Assessment Admissions Testing. This is an independent tool for your personal study and is not affiliated with UAT-UK.</p><p>Topic labels are inferred study aids, not official classifications or difficulty ratings. Your attempts and bookmarks are saved in this app on this device.</p><p id="import-date"></p></div>
+    </main>
+  </div>
+  <div id="toast" class="toast" role="status" hidden></div>
+  <dialog id="image-dialog" aria-label="Full-size question or solution"><button id="close-image-dialog" class="button" type="button">Close</button><div class="zoom-scroll"><img id="zoom-image" alt=""></div></dialog>
+  <script src="data/questions.js" defer></script>
+  <script src="app.js" defer></script>
+  <script src="pdf-renderer.mjs" type="module"></script>
+</body>
+</html>

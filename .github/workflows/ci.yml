@@ -1,0 +1,30 @@
+name: Build and test
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Frontend and metadata tests
+        run: node --test tests/frontend-regression.test.cjs tests/public-metadata.test.mjs
+      - name: Download and integrity tests
+        run: dotnet run --project tests/native/NativeTests.csproj -- .build/native-tests
+      - name: Build public Windows app
+        shell: pwsh
+        run: ./scripts/build.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TMUA-Study-Tool-windows-x64
+          path: publish/TMUA-Study-Tool.exe

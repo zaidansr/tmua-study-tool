@@ -1,0 +1,22 @@
+{
+  "success": true,
+  "passed": [
+    "fresh profile shows setup",
+    "setup downloads and reloads into question bank",
+    "all 45 production PDFs match pinned checksums",
+    "all 360 questions available",
+    "PDF.js renders individual original question via local CORS host",
+    "question navigation selects Q2",
+    "Q2 equation image renders",
+    "incorrect answer checks against official key",
+    "bookmark saved",
+    "official worked solution rendered from downloaded PDF",
+    "full-size question dialog works",
+    "original solution opens owned native window",
+    "solution PDF deep-link selects Q2 source page",
+    "document title: TMUA \u2014 2023 Paper 1 Worked Answers",
+    "retry and correct marking work",
+    "reload preserves question, answer and bookmark"
+  ],
+  "pdfCount": 45
+}

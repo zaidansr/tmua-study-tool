@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>TMUA-Study-Tool</AssemblyName>
+    <RootNamespace>TmuaDesktop</RootNamespace>
+    <Version>1.1.0</Version>
+    <Product>TMUA Study Tool</Product>
+    <Description>Free TMUA practice. Download official papers locally for personal study.</Description>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <DebugType>embedded</DebugType>
+    <PublishTrimmed>false</PublishTrimmed>
+    <ApplicationIcon Condition="Exists('Assets\app.ico')">Assets\app.ico</ApplicationIcon>
+    <SiteArchive Condition="'$(SiteArchive)' == ''">$(MSBuildProjectDirectory)\.build\web.zip</SiteArchive>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="tests\**\*.cs" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4314.35" />
+    <EmbeddedResource Include="$(SiteArchive)" LogicalName="TmuaDesktop.Site.zip" />
+  </ItemGroup>
+  <Target Name="CheckSiteArchive" BeforeTargets="PrepareForBuild">
+    <Error Condition="!Exists('$(SiteArchive)')" Text="The app bundle is missing. Run the web packaging script or supply -p:SiteArchive=absolute-path.zip." />
+  </Target>
+  <Target Name="RemoveUnusedWebView2Wpf" BeforeTargets="ResolveAssemblyReferences">
+    <ItemGroup>
+      <Reference Remove="@(Reference)" Condition="'%(Reference.Filename)' == 'Microsoft.Web.WebView2.Wpf'" />
+    </ItemGroup>
+  </Target>
+</Project>

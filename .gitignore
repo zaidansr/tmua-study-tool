@@ -1,0 +1,37 @@
+# Build output and local tooling
+bin/
+obj/
+publish/
+artifacts/
+.build/
+.vs/
+.vscode/
+*.user
+*.suo
+*.log
+*.tmp
+__pycache__/
+*.pyc
+node_modules/
+web/vendor/pdfjs/
+
+# Personal data, imported content and local configuration
+papers/
+profiles/
+WebView2/
+.env
+.env.*
+!.env.example
+*.pfx
+*.pem
+*.key
+
+# Release executables and generated archives belong in GitHub Releases
+*.exe
+*.dll
+*.pdb
+*.zip
+*.pdf
+*.webp
+.DS_Store
+Thumbs.db

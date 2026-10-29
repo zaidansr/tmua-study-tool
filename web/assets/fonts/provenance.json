@@ -1,0 +1,31 @@
+{
+  "cssUrl": "https://fonts.googleapis.com/css2?family=DM+Sans:wght@400..700&family=Libre+Caslon+Display&display=swap",
+  "assets": [
+    {
+      "family": "DM Sans",
+      "weight": "400 700",
+      "file": "dm-sans-latin.woff2",
+      "url": "https://fonts.gstatic.com/s/dmsans/v17/rP2Yp2ywxg089UriI5-g4vlH9VoD8Cmcqbu0-K4.woff2",
+      "bytes": 36932,
+      "sha256": "9fea608a947e67020c33cad9a6fe3d60c54119dfb8cff87768a8117a15ed7543"
+    },
+    {
+      "family": "Libre Caslon Display",
+      "weight": "400",
+      "file": "libre-caslon-display-latin.woff2",
+      "url": "https://fonts.gstatic.com/s/librecaslondisplay/v18/TuGOUUFxWphYQ6YI6q9Xp61FQzxDRKmzr1lWfxk.woff2",
+      "bytes": 24236,
+      "sha256": "84267e937417f10dff37df818c5ef7f1e9f2e6a703e03c2dd286d3320af53269"
+    },
+    {
+      "license": "DM-Sans-OFL.txt",
+      "url": "https://raw.githubusercontent.com/google/fonts/main/ofl/dmsans/OFL.txt",
+      "sha256": "9af36190332437f5ecd09974de43c1f7c77a310a996cdd8ceb25628b458840e1"
+    },
+    {
+      "license": "Libre-Caslon-Display-OFL.txt",
+      "url": "https://raw.githubusercontent.com/google/fonts/main/ofl/librecaslondisplay/OFL.txt",
+      "sha256": "9cc8cef15f5e8bcbe99a13ee8d268f6f6f6a5811cd1ed05056ef4608c9b16fd1"
+    }
+  ]
+}

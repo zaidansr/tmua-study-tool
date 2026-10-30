@@ -149,8 +149,34 @@
     }).join('') : '<p class="list-empty">No questions match these filters.</p>';
     if (focusedId) $('question-list').querySelector(`[data-question="${CSS.escape(focusedId)}"]`)?.focus({preventScroll:true});
   }
+  function updateQuestionMarkup(workspace,id,markup) {
+    // Keep an online PDF viewer mounted when checking an answer or bookmarking;
+    // replacing its iframe would reset its page/zoom and start it loading again.
+    if (window.TMUA_BROWSER && workspace.dataset.questionId === id) {
+      const template = document.createElement('template');
+      if (template.content) {
+        template.innerHTML = markup;
+        for (const selector of ['.question-tools','.answer-section','.position-note','.question-navigation']) {
+          const current = workspace.querySelector(selector), next = template.content.querySelector(selector);
+          if (current && next) current.innerHTML = next.innerHTML;
+        }
+        const currentSolution = workspace.querySelector('.solution-panel'), nextSolution = template.content.querySelector('.solution-panel');
+        if (currentSolution && !nextSolution) currentSolution.remove();
+        if (!currentSolution && nextSolution) workspace.querySelector('.question-bottom').before(nextSolution);
+        return;
+      }
+    }
+    workspace.innerHTML = markup; workspace.dataset.questionId = id;
+  }
   function imageMarkup(paths, description) {
-    return (paths || []).map((region, index) => `<a class="image-zoom pdf-region" href="${escape(pdfLink(region.pdf,region.page))}" target="_blank" rel="noopener noreferrer" title="Open full-size image" data-pdf-region="${escape(JSON.stringify(region))}"><span class="pdf-loading" role="status">Rendering original PDF…</span><img hidden alt="${escape(description)}${paths.length > 1 ? `, part ${index + 1} of ${paths.length}` : ''}. Open full-size image." decoding="async"></a>`).join('');
+    return (paths || []).map((region, index) => {
+      const title = `${description}${paths.length > 1 ? `, part ${index + 1} of ${paths.length}` : ''}`;
+      if (window.TMUA_BROWSER && !window.TMUA_BROWSER.hasPdf(region.pdf)) {
+        const original = pdfLink(window.TMUA_BROWSER.sourceUrl(region.pdf),region.page)+'&view=FitH';
+        return `<section class="remote-pdf"><p>Original PDF page ${escape(region.page)}. <a href="${escape(original)}" target="_blank" rel="noopener noreferrer">Open original PDF ↗</a> · <button class="text-button import-region-pdf" type="button">Import for the individual question</button></p><iframe class="publisher-pdf" src="${escape(original)}" title="${escape(title)}" loading="lazy"></iframe></section>`;
+      }
+      return `<a class="image-zoom pdf-region" href="${escape(pdfLink(region.pdf,region.page))}" target="_blank" rel="noopener noreferrer" title="Open full-size image" data-pdf-region="${escape(JSON.stringify(region))}"><span class="pdf-loading" role="status">Rendering original PDF…</span><img hidden alt="${escape(title)}. Open full-size image." decoding="async"></a>`;
+    }).join('');
   }
   function pdfLink(path, page) { return path ? `${path}${page ? `#page=${page}` : ''}` : ''; }
   function renderQuestion() {
@@ -174,8 +200,9 @@
     }).join('');
     const feedback = marked ? `<div class="feedback${r.correct ? '' : ' incorrect'}" role="status"><span class="feedback-icon" aria-hidden="true">${r.correct ? '✓' : '↺'}</span><span><strong>${r.correct ? 'Correct.' : 'Incorrect.'}</strong> ${r.correct ? `Answer ${escape(answer)}.` : `You chose ${escape(selected)}. Answer ${escape(answer)}.`}</span></div>` : '';
     const solution = state.reveal ? `<section class="solution-panel" aria-label="Worked solution"><div class="solution-heading"><h3>Worked solution</h3>${solutionLink ? `<a href="${escape(solutionLink)}" target="_blank" rel="noopener noreferrer">Open original solution ↗</a>` : ''}</div>${(q.solutionImages || []).length ? `<div class="solution-images">${imageMarkup(q.solutionImages, `Official worked solution for ${yearLabel(q)} ${paperLabel(q)}, Question ${q.number}`)}</div>` : `<p class="no-image">${solutionLink ? `The worked solution is available in the <a href="${escape(solutionLink)}" target="_blank" rel="noopener noreferrer">original PDF ↗</a>.` : 'A worked solution is not available for this question.'}</p>`}<p class="solution-note">Original official worked solution. ${q.solutionPages?.length ? `PDF page${q.solutionPages.length > 1 ? 's' : ''} ${escape(q.solutionPages.join(', '))}.` : ''}</p></section>` : '';
-    workspace.innerHTML = `<article class="question-card"><div class="question-toolbar"><div class="question-meta"><span class="badge year-badge">${escape(yearLabel(q))}</span><span class="badge">${paperLabel(q)}</span><span class="question-number">Question ${escape(q.number)}</span></div><div class="question-tools"><span class="timer" id="question-timer" aria-label="Time on current attempt">${elapsedTime()}</span><button id="bookmark-question" class="icon-button${r.bookmarked ? ' bookmarked' : ''}" type="button" aria-label="${r.bookmarked ? 'Remove bookmark' : 'Bookmark question'}" aria-pressed="${Boolean(r.bookmarked)}">${icon('bookmark',r.bookmarked)}<span>${r.bookmarked ? 'Saved' : 'Save'}</span></button></div></div><div class="question-body"><div class="topic-line"><h2>${escape(topicLabel(q))}</h2><span class="paper-type">${Number(q.paper) === 1 ? 'Mathematical Thinking' : 'Mathematical Reasoning'}</span></div><div class="question-images">${(q.images || []).length ? imageMarkup(q.images, questionDescription) : `<div class="text-fallback">${escape(q.text || 'Open the original paper to read this question.')}</div>`}</div>${q.text ? `<details class="question-text"><summary>Read extracted text</summary><pre>${escape(q.text)}</pre></details>` : ''}<div class="answer-section"><p class="answer-label">YOUR ANSWER</p><div class="answer-options" role="group" aria-label="Choose your answer">${optionMarkup}</div><div class="question-action-bar"><button id="mark-answer" class="button primary" type="button"${!selected || marked || !answer ? ' disabled' : ''}>${marked ? 'Answer checked' : !answer ? 'Answer key unavailable' : 'Check answer'}<span aria-hidden="true">↗</span></button><button id="reveal-solution" class="reveal-button" type="button" aria-expanded="${state.reveal}">${state.reveal ? 'Hide worked solution' : 'Show worked solution'}</button>${marked ? '<button id="retry-question" class="text-button" type="button">Try again</button>' : ''}</div>${feedback}</div></div>${solution}<div class="question-bottom">${questionLink ? `<a class="original-link" href="${escape(questionLink)}" target="_blank" rel="noopener noreferrer">Original question paper ↗</a>` : '<span></span>'}<span class="position-note">${index >= 0 ? `${index + 1} of ${questions.length} matching questions` : 'Reviewed · no longer matches this filter'}</span></div></article><nav class="question-navigation" aria-label="Question navigation"><button id="previous-question" class="nav-button" type="button"${!navigation.previous ? ' disabled' : ''}>← Previous</button><button id="random-question" class="random-button" type="button"${!navigation.random.length ? ' disabled' : ''}><span aria-hidden="true">⤨</span> Surprise me</button><button id="next-question" class="nav-button next" type="button"${!navigation.next ? ' disabled' : ''}>Next question →</button></nav>`;
+    updateQuestionMarkup(workspace,q.id,`<article class="question-card"><div class="question-toolbar"><div class="question-meta"><span class="badge year-badge">${escape(yearLabel(q))}</span><span class="badge">${paperLabel(q)}</span><span class="question-number">Question ${escape(q.number)}</span></div><div class="question-tools"><span class="timer" id="question-timer" aria-label="Time on current attempt">${elapsedTime()}</span><button id="bookmark-question" class="icon-button${r.bookmarked ? ' bookmarked' : ''}" type="button" aria-label="${r.bookmarked ? 'Remove bookmark' : 'Bookmark question'}" aria-pressed="${Boolean(r.bookmarked)}">${icon('bookmark',r.bookmarked)}<span>${r.bookmarked ? 'Saved' : 'Save'}</span></button></div></div><div class="question-body"><div class="topic-line"><h2>${escape(topicLabel(q))}</h2><span class="paper-type">${Number(q.paper) === 1 ? 'Mathematical Thinking' : 'Mathematical Reasoning'}</span></div><div class="question-images">${(q.images || []).length ? imageMarkup(q.images, questionDescription) : `<div class="text-fallback">${escape(q.text || 'Open the original paper to read this question.')}</div>`}</div>${q.text ? `<details class="question-text"><summary>Read extracted text</summary><pre>${escape(q.text)}</pre></details>` : ''}<div class="answer-section"><p class="answer-label">YOUR ANSWER</p><div class="answer-options" role="group" aria-label="Choose your answer">${optionMarkup}</div><div class="question-action-bar"><button id="mark-answer" class="button primary" type="button"${!selected || marked || !answer ? ' disabled' : ''}>${marked ? 'Answer checked' : !answer ? 'Answer key unavailable' : 'Check answer'}<span aria-hidden="true">↗</span></button><button id="reveal-solution" class="reveal-button" type="button" aria-expanded="${state.reveal}">${state.reveal ? 'Hide worked solution' : 'Show worked solution'}</button>${marked ? '<button id="retry-question" class="text-button" type="button">Try again</button>' : ''}</div>${feedback}</div></div>${solution}<div class="question-bottom">${questionLink ? `<a class="original-link" href="${escape(questionLink)}" target="_blank" rel="noopener noreferrer">Original question paper ↗</a>` : '<span></span>'}<span class="position-note">${index >= 0 ? `${index + 1} of ${questions.length} matching questions` : 'Reviewed · no longer matches this filter'}</span></div></article><nav class="question-navigation" aria-label="Question navigation"><button id="previous-question" class="nav-button" type="button"${!navigation.previous ? ' disabled' : ''}>← Previous</button><button id="random-question" class="random-button" type="button"${!navigation.random.length ? ' disabled' : ''}><span aria-hidden="true">⤨</span> Surprise me</button><button id="next-question" class="nav-button next" type="button"${!navigation.next ? ' disabled' : ''}>Next question →</button></nav>`);
     window.TMUA_PDFRenderer?.mount(workspace);
+    window.TMUA_BROWSER?.rewriteLinks(workspace);
     if (focused) {
       let target = focusOption ? workspace.querySelector(`[data-option="${CSS.escape(focusOption)}"]`) : focusId ? $(focusId) : null;
       if (!target || target.disabled) target = focusId === 'mark-answer' ? $('reveal-solution') : focusId === 'retry-question' ? workspace.querySelector('[data-option]') : workspace;
@@ -280,6 +307,10 @@
     setInterval(() => { const timer = $('question-timer'); if (timer) timer.textContent = elapsedTime(); }, 1000);
   }
   async function initialize() {
+    if (window.TMUA_BOOT) await window.TMUA_BOOT;
+    if (window.TMUA_BROWSER && !window.TMUA_BROWSER.repository) {
+      $('loading').hidden = true; $('error').hidden = false; $('error-detail').textContent = window.TMUA_BROWSER.error || 'The source list could not load. Reload this page to try again.'; return;
+    }
     if (window.TMUA_CONTENT_READY === false) {
       $('loading').hidden = true; $('setup').hidden = false;
       const download = $('download-papers'), status = $('download-status'), progress = $('download-progress');
@@ -316,6 +347,30 @@
       const topics = [...new Set(data.questions.map(topicLabel))].sort((a,b) => a.localeCompare(b));
       $('topic-filter').insertAdjacentHTML('beforeend',topics.map((t) => `<option value="${escape(t)}">${escape(t)}</option>`).join(''));
       bindEvents(); renderSummary(); renderSources();
+      if (window.TMUA_BROWSER) {
+        const browser = window.TMUA_BROWSER, manager = $('paper-manager'), input = $('import-papers-files'), importButton = $('import-papers'), status = $('browser-import-status');
+        $('browser-paper-bar').hidden = false;
+        $('browser-paper-summary').textContent = browser.status.completed ? `${browser.status.completed} of ${browser.status.total} PDFs stored on this device.` : 'Viewing original publisher PDFs online.';
+        status.textContent = browser.error || `${browser.status.completed} of ${browser.status.total} official PDFs stored.`;
+        $('browser-download-list').innerHTML = browser.repository.sources.map((source) => `<a href="${escape(source.url)}" target="_blank" rel="noopener noreferrer">${escape(source.label)} ↗</a>`).join('');
+        const showManager = () => manager.showModal();
+        $('manage-papers').addEventListener('click',showManager);
+        $('close-paper-manager').addEventListener('click',() => manager.close());
+        importButton.addEventListener('click',() => input.click());
+        document.addEventListener('click',(event) => { if (event.target.closest('.import-region-pdf')) showManager(); });
+        window.tmuaDownloadProgress = (update) => {
+          status.textContent = update.message || '';
+          importButton.disabled = update.state === 'importing';
+          $('browser-paper-summary').textContent = `${update.completed || 0} of ${update.total || 45} PDFs stored on this device.`;
+          if (update.state === 'complete') location.reload();
+        };
+        input.addEventListener('change',async () => {
+          try { if (input.files?.length) await browser.importFiles([...input.files]); }
+          catch (error) { status.textContent = error.message; importButton.disabled = false; }
+          input.value = '';
+        });
+        browser.rewriteLinks($('sources-view'));
+      }
       window.addEventListener('tmua-pdf-ready',() => window.TMUA_PDFRenderer?.mount($('question-workspace')));
       $('close-image-dialog').addEventListener('click',() => $('image-dialog').close());
       let hashId = ''; try { hashId = decodeURIComponent(location.hash.slice(1)); } catch (_) { /* Ignore invalid external fragments. */ }

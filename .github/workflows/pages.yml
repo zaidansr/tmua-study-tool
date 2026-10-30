@@ -1,0 +1,49 @@
+name: Deploy study tool to Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - name: Frontend and metadata tests
+        run: node --test tests/frontend-regression.test.cjs tests/browser-store.test.mjs tests/public-metadata.test.mjs
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+      - name: Package public web app
+        shell: pwsh
+        run: ./scripts/build-pages.ps1
+      - name: Verify publication guards
+        shell: pwsh
+        run: ./tests/public-package.test.ps1
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: .build/pages
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

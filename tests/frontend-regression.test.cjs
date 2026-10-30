@@ -70,13 +70,14 @@ class Document {
 function fixture() {
   return {meta:{},papers:[{id:'2023-p1',year:'2023',paper:1,questionPdf:'papers/question.pdf',solutionPdf:'papers/solution.pdf'}],questions:Array.from({length:8},(_,i) => ({id:`q${i + 1}`,year:'2023',paper:1,number:i + 1,paperId:'2023-p1',topic:i < 4 ? 'Algebra' : 'Logic',text:`Question ${i + 1}`,options:['A','B','C','D'],answer:'A',images:[],solutionImages:[]}))};
 }
-function createApp({progress,storage = {},hash = '',historyThrows = false,storageThrows = false,storageReadThrows = false,data = fixture(),allowError = false,random = Math.random,contentReady = true} = {}) {
+function createApp({progress,storage = {},hash = '',historyThrows = false,storageThrows = false,storageReadThrows = false,data = fixture(),allowError = false,random = Math.random,contentReady = true,browser} = {}) {
   const document = new Document(), handlers = {}, entries = storage instanceof Map ? storage : new Map(Object.entries(storage)), intervals = [];
   if (progress !== undefined) entries.set(STORAGE,typeof progress === 'string' ? progress : JSON.stringify(progress));
   let now = 100000;
   class ClockDate extends Date { constructor(...args) { super(...(args.length ? args : [now])); } static now() { return now; } }
   const messages = [];
   const window = {TMUA_CONTENT_READY:contentReady,TMUA_DATA:data,chrome:{webview:{postMessage:(message) => messages.push(message)}},innerWidth:1200,confirm:() => true,addEventListener:(type,fn) => { (handlers[type] ||= []).push(fn); }};
+  if (browser) window.TMUA_BROWSER = browser;
   const location = {hash,protocol:'https:',reloads:0,reload(){this.reloads++;}};
   const fails = (setting) => typeof setting === 'function' ? setting() : setting;
   const localStorage = {getItem:(key) => { if (fails(storageReadThrows)) throw new Error('Storage reads unavailable'); return entries.get(key) ?? null; },setItem:(key,value) => { if (fails(storageThrows)) throw new Error('Storage unavailable'); entries.set(key,String(value)); }};
@@ -278,4 +279,25 @@ test('first-run download is explicit, progress updates, failure retries and succ
   h.window.tmuaDownloadProgress({state:'error',completed:12,total:45,message:'Connection unavailable'}); assert.equal(h.get('download-papers').disabled,false); assert.equal(h.get('download-papers').textContent,'Retry download');
   h.click('download-papers'); assert.equal(h.messages.length,2);
   h.window.tmuaDownloadProgress({state:'complete',completed:45,total:45,message:'Ready'}); assert.equal(h.location.reloads,1);
+});
+
+test('browser with zero local PDFs exposes all 360 questions through original publisher page frames',() => {
+  const browser = {status:{completed:0,total:45},error:'Local storage unavailable',repository:{sources:[]},hasPdf:() => false,sourceUrl:(url) => 'https://publisher.invalid/'+url.split('/').pop(),rewriteLinks(){}};
+  const h = createApp({data:realData(),browser});
+  assert.equal(h.get('app').hidden,false); assert.equal(h.get('setup').hidden,true); assert.equal(h.get('total-count').textContent,360); assert.equal(h.app.filteredQuestions().length,360);
+  assert.equal(h.get('browser-paper-bar').hidden,false); assert.match(h.get('browser-import-status').textContent,/storage unavailable/);
+  const q = h.app.state.data.questions.find((item) => item.id === h.app.state.currentId);
+  assert.match(h.get('question-workspace').innerHTML,/class="publisher-pdf"/); assert.ok(h.get('question-workspace').innerHTML.includes(`#page=${q.images[0].page}&amp;view=FitH`));
+  assert.match(h.get('question-workspace').innerHTML,/Open original PDF/);
+  assert.ok(h.get('question-workspace').innerHTML.indexOf('Open original PDF') < h.get('question-workspace').innerHTML.indexOf('<iframe'), 'Original PDF fallback must appear above the embedded viewer');
+  h.click('reveal-solution'); assert.equal(h.get('question-workspace').querySelectorAll('iframe').length,q.images.length+q.solutionImages.length);
+  let opened = false; h.get('paper-manager').showModal = () => {opened = true;}; h.click('manage-papers'); assert.equal(opened,true);
+});
+
+test('browser with an imported PDF uses individual crop descriptors while keeping all questions',() => {
+  let rewrites = 0;
+  const browser = {status:{completed:1,total:45},error:'',repository:{sources:[]},hasPdf:() => true,sourceUrl:(url) => 'https://publisher.invalid/'+url.split('/').pop(),rewriteLinks(){rewrites++;}};
+  const h = createApp({data:realData(),browser});
+  assert.equal(h.get('total-count').textContent,360); assert.equal(h.get('question-workspace').querySelectorAll('iframe').length,0);
+  assert.match(h.get('question-workspace').innerHTML,/data-pdf-region=/); assert.ok(rewrites >= 2);
 });

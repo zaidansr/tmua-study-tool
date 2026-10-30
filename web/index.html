@@ -11,7 +11,7 @@
 <body>
   <a class="skip-link" href="#main">Skip to questions</a>
   <header class="site-header">
-    <a class="brand" href="#" aria-label="TMUA question bank home"><span class="brand-mark" aria-hidden="true">∴</span><span>TMUA<span class="brand-sub">desktop question bank</span></span></a>
+    <a class="brand" href="#" aria-label="TMUA question bank home"><span class="brand-mark" aria-hidden="true">∴</span><span>TMUA<span class="brand-sub">question bank</span></span></a>
     <nav class="nav" aria-label="Main navigation"><button class="nav-link active" id="practice-tab" type="button">Practice</button><button class="nav-link" id="sources-tab" type="button">Papers & sources</button></nav>
   </header>
   <div id="loading" class="loading-state" role="status"><p>Loading questions…</p></div>
@@ -26,6 +26,7 @@
   </main>
   <div id="error" class="loading-state" hidden role="alert"><h1>The question bank couldn’t load.</h1><p id="error-detail"></p><button class="button primary" type="button" onclick="location.reload()">Try again</button></div>
   <div id="app" hidden>
+    <div id="browser-paper-bar" class="browser-paper-bar" hidden><span id="browser-paper-summary">Viewing original publisher PDFs.</span><button id="manage-papers" class="text-button" type="button">Import PDFs for individual questions</button></div>
     <div class="app-layout" id="practice-view">
       <aside class="sidebar" aria-label="Question filters and question list">
         <div class="sidebar-heading"><span class="sidebar-label">Filters</span><button id="clear-filters" class="text-button" type="button">Clear filters</button></div>
@@ -57,7 +58,18 @@
   </div>
   <div id="toast" class="toast" role="status" hidden></div>
   <dialog id="image-dialog" aria-label="Full-size question or solution"><button id="close-image-dialog" class="button" type="button">Close</button><div class="zoom-scroll"><img id="zoom-image" alt=""></div></dialog>
+  <dialog id="paper-manager" aria-labelledby="paper-manager-title">
+    <div class="manager-heading"><h2 id="paper-manager-title">Your local PDFs</h2><button id="close-paper-manager" class="button" type="button">Close</button></div>
+    <p>Read the official PDFs immediately online, or import your own original copies to see each question individually and use them without downloading again.</p>
+    <p>Select any question papers or worked solutions saved from the <a href="https://esat-tmua.ac.uk/tmua-preparation-materials/" target="_blank" rel="noopener noreferrer">official archive ↗</a>. Imported files stay in this browser on this device.</p>
+    <button id="import-papers" class="button primary" type="button">Import official PDFs</button>
+    <p id="browser-import-status" role="status"></p>
+    <details><summary>Get the official PDFs</summary><p>Open a PDF below, save it, then import it here. You can start with one question paper and its worked solutions.</p><div id="browser-download-list" class="browser-download-list"></div></details>
+    <p class="local-pdf-note">Questions and solutions belong to their publishers. This independent study tool links to the official files. Clearing this site’s browser data removes local papers and saved progress.</p>
+  </dialog>
+  <input id="import-papers-files" type="file" accept=".pdf,application/pdf" multiple hidden aria-label="Choose original official PDF files">
   <script src="data/questions.js" defer></script>
+  <script src="browser-bootstrap.js" defer></script>
   <script src="app.js" defer></script>
   <script src="pdf-renderer.mjs" type="module"></script>
 </body>

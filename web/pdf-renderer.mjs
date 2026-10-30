@@ -15,7 +15,10 @@ function documentFor(url) {
   if (!/^https:\/\/papers\.tmua\.local\/[a-zA-Z0-9._-]+\.pdf$/.test(url)) throw new Error('The PDF address is outside the local paper archive.');
   let entry = documents.get(url);
   if (!entry) {
-    entry = {active:0,promise:pdfjs.getDocument({url,disableRange:true,disableStream:true,isEvalSupported:false,cMapUrl:vendor+'cmaps/',cMapPacked:true,standardFontDataUrl:vendor+'standard_fonts/',wasmUrl:vendor+'wasm/'}).promise};
+    entry = {active:0,promise:(async () => {
+      const source = window.TMUA_BROWSER ? {data:await window.TMUA_BROWSER.resolvePdf(url)} : {url};
+      return pdfjs.getDocument({...source,disableRange:true,disableStream:true,isEvalSupported:false,cMapUrl:vendor+'cmaps/',cMapPacked:true,standardFontDataUrl:vendor+'standard_fonts/',wasmUrl:vendor+'wasm/'}).promise;
+    })()};
     documents.set(url,entry);
     entry.promise.catch(() => { if (documents.get(url) === entry) documents.delete(url); });
   }

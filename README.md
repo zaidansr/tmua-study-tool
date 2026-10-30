@@ -1,6 +1,14 @@
 # TMUA Study Tool
 
-A free Windows app for practising TMUA questions, with official worked solutions, topic and year filters, bookmarks, a timer and saved progress. No account is required.
+A free study tool for practising TMUA questions, with official worked solutions, topic and year filters, bookmarks, a timer and saved progress. Use it in a browser or download the Windows app. No account is required.
+
+## Open in your browser
+
+Open [TMUA Study Tool](https://zaidansr.github.io/tmua-study-tool/). You can start practising immediately: the website displays the original publisher-hosted PDF at the relevant page, with answer checking, filters and progress. An **Open original PDF** link is also available if your browser cannot display the embedded document.
+
+For individual question crops and local paper viewing, optionally import one or more original PDFs downloaded from the official archive. Imports are checked against the expected SHA-256 hashes and saved in your browser's local database. The website hosts the app and question index; exam files are served by the publisher or kept in your own browser.
+
+Browser papers and progress stay in that browser's local storage. They are separate from the Windows app's data. Clearing site data removes the browser's saved papers and progress. Viewing the publisher's embedded PDFs requires an internet connection. Once the page is open, viewing imported papers does not contact the publisher; the Windows app provides the complete offline setup.
 
 ## Download and use
 
@@ -19,7 +27,7 @@ This is an independent project. It is not affiliated with or endorsed by UAT-UK,
 
 ## Papers and licensing
 
-The public repository and executable do **not** contain exam PDFs, extracted question text, question images or solution images. The app displays individual questions from the unchanged PDFs downloaded onto your computer. Exam materials retain their original copyright and are subject to the [publisher's terms of use](https://esat-tmua.ac.uk/website-terms-of-use/); they are not covered by this project's MIT licence.
+The public repository, hosted website and executable do **not** contain exam PDFs, extracted question text, question images or solution images. The app displays individual questions from the unchanged PDFs downloaded onto your computer. Exam materials retain their original copyright and are subject to the [publisher's terms of use](https://esat-tmua.ac.uk/website-terms-of-use/); they are not covered by this project's MIT licence.
 
 The app's original source code is available under the [MIT licence](LICENSE). Bundled dependencies have their own licences; see [third-party notices](THIRD_PARTY_NOTICES.md).
 
@@ -38,6 +46,8 @@ Install the .NET 10 SDK and run from the repository root:
 ```
 
 The build packages `web/` and publishes a self-contained Windows x64 executable. An internet connection is needed to restore the pinned WebView2 SDK package and fetch the pinned PDF.js package, whose checksum the build verifies. PDF.js is bundled into the executable with its licences; the local fonts and their licences are included in the source. Building the app does not download exam papers.
+
+To build only the static website, run `./scripts/build-pages.ps1` with PowerShell 7. It fetches the same pinned PDF.js dependency, checks that exam content and extracted text fields are absent, and writes the Pages artifact to `.build/pages/`. It does not run .NET or download exam papers. The Pages workflow deploys this directory on pushes to `main`.
 
 ## Report a problem
 

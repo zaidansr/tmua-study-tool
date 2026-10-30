@@ -15,3 +15,14 @@ The public release was checked for study behaviour, download integrity and accid
 The index contains 360 questions and 749 question or solution regions. The full render check establishes that each indexed region produces a non-empty image; it does not establish the mathematical correctness of each official solution or substitute for reading every rendered equation and diagram.
 
 Topic labels are project study aids, rather than official classifications. PDF.js rendering can differ from the publisher's PDF viewer, so original PDF links are available when inspecting a question or solution. The checks use the released historical source PDFs and cannot establish the behaviour of future publisher replacements or every Windows installation.
+
+## Browser version — 30 October 2026
+
+The GitHub Pages version adds online viewing of unchanged publisher-hosted PDFs and optional local PDF imports. All 360 questions are accessible before importing files. Embedded PDF support depends on the browser; an original-PDF link appears above each viewer.
+
+- All 26 JavaScript test groups passed, including browser imports, SHA-256 verification, partial imports, damaged-cache recovery, storage errors and the existing practice regressions.
+- Six publication checks passed, including rejection of PDFs, renamed PDFs, extracted question text, rendered question images and asset paths that would break project Pages.
+- Browser integration at a project-style URL verified actual publisher PDF frames, a renamed-file import, all 45 verified local imports, answer checking, bookmarks, full-size images, PDF page links and persistence after reload.
+- All 749 regions rendered and decoded from the browser's IndexedDB copies, with positive dimensions and visible pixels, zero failures, in 68.4 seconds. Reopening an earlier PDF after cache eviction also passed.
+
+The browser checks use an isolated profile and the same production scripts. They do not establish compatibility with every browser or independently verify the mathematics in the original papers. Browser progress is separate from desktop progress; clearing site data removes local imports and progress.

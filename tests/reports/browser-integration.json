@@ -1,0 +1,33 @@
+{
+  "success": true,
+  "passed": [
+    "fresh browser starts at Pages-like subpath without native injection",
+    "fresh browser exposes all 360 questions",
+    "unimported question uses original publisher PDF frame",
+    "actual publisher PDF iframe loads successfully",
+    "async browser phase completed",
+    "PDF manager opens",
+    "changed PDF rejected by SHA-256 with no stored file",
+    "unimported Q2 uses publisher PDF at correct page",
+    "single renamed original imported by content hash and persisted through reload",
+    "single imported question paper renders exact individual crop",
+    "partial import retains all 360 browseable questions",
+    "browser answer marking checks official key",
+    "missing solution remains readable from publisher alongside imported question",
+    "all 45 original files imported and checksum-validated in IndexedDB",
+    "PDF import reload preserves current question, answer and bookmark",
+    "question renders from persisted IndexedDB bytes",
+    "worked solution renders from persisted IndexedDB bytes",
+    "browser full-size crop dialog works",
+    "original solution anchor has prepared local blob and correct page",
+    "trusted click opens local original solution without popup blocking",
+    "browser retry and correct answer work",
+    "browser reload retains all45 papers, progress and bookmark",
+    "browser PDF.js adapter available",
+    "all 749 browser IndexedDB-backed regions processed",
+    "early PDF reopens after document-cache eviction without detached buffers",
+    "previous imported question remains readable after full corpus traversal"
+  ],
+  "publisherFramesLoaded": 3,
+  "trustedPdfPopupOpened": true
+}

@@ -10,6 +10,14 @@ For individual question crops and local paper viewing, optionally import one or 
 
 Browser papers and progress stay in that browser's local storage. They are separate from the Windows app's data. Clearing site data removes the browser's saved papers and progress. Viewing the publisher's embedded PDFs requires an internet connection. Once the page is open, viewing imported papers does not contact the publisher; the Windows app provides the complete offline setup.
 
+## Attempt history and test mode
+
+Each question has an **Attempt history** section with the date, answer, result and time for every checked try. **Try again** starts a new try and preserves the previous ones. Practice time accumulates when you revisit a question and survives reloads; it pauses when the page is hidden. An older saved answer is imported once as an earlier attempt, with unknown timing shown as unrecorded.
+
+Open **Test mode**, choose one paper and a time limit, then start. The default is 75 minutes. While the test is running, navigation stays within that paper and marking, answer keys and worked solutions are unavailable. The countdown continues in the background and after reloads. Submit the test or let the timer expire to see every question marked, including unanswered questions, with a **Worked solution** button beside each result. Completed tests can be reopened from **Previous tests**. Each submitted question also appears in its attempt history.
+
+History, active tests, responses and progress stay in this browser or app profile on this device. Clearing site data removes them. Browser and desktop profiles are separate.
+
 ## Download and use
 
 1. Download `TMUA-Study-Tool-windows-x64.zip` from [Releases](https://github.com/zaidansr/tmua-study-tool/releases/latest).

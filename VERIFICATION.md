@@ -1,4 +1,18 @@
-# Verification — 1.1.0
+# Verification
+
+## Version 1.2.0 — 1 November 2026
+
+Attempt history and timed paper tests were checked with isolated profiles; existing user progress was not used for testing.
+
+- 61 JavaScript test groups passed: 27 frontend, 11 attempt-history, 15 timed-test model, five PDF-import and three metadata/geometry groups. Existing coverage includes all 2,285 answer choices, 1,950 filter combinations and a seeded 600-action sequence.
+- History checks cover repeated correct/wrong tries, cumulative question time across navigation and reloads, legacy migration, immutable duplicate IDs, reset generations, cross-tab changes and storage failure recovery. Regressions also cover stale marking after another tab resets progress, focus-only recovery of pending writes and fractional time preserved through navigation by tabs or URL fragments.
+- Browser integration passed 32 checks: practice histories, retry/reload, a single-paper countdown, hidden marking and solution controls, locked navigation, persisted test answers and deadline, all 20 marked results, adjacent worked solutions, saved test reviews, duplicate prevention and expiry both while open and while closed.
+- The final Windows build passed 12 native-host checks covering local PDF rendering, saved correctness and time, the timed paper flow, all 20 result rows, worked-solution review and persistence after reload without duplicate attempts.
+- The public bundle guard continues to exclude exam PDFs, cropped exam images, extracted full text and personal profiles. Papers are viewed from the publisher or imported locally.
+
+Practice time pauses while the page is hidden; a test's wall-clock countdown continues. Storage-denied sessions show a warning and retain recoverable state in memory, but durable saving still requires browser storage. These checks establish the covered behaviour, not an absolute guarantee of error-free software.
+
+## Original 1.1.0 archive and application checks
 
 The public release was checked for study behaviour, download integrity and accidental inclusion of exam content. These checks provide evidence for the covered flows; they do not guarantee that every possible error has been found or independently prove the publisher's mathematics.
 

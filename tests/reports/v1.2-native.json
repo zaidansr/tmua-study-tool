@@ -1,0 +1,17 @@
+{
+  "success": true,
+  "passed": [
+    "production native app opens new feature bundle with existing local PDFs",
+    "native readiness bypasses browser import adapter",
+    "native individual question renders through local PDF host",
+    "native checked attempt records correctness and time in history",
+    "native test picker opens",
+    "native timed test stays on one complete paper",
+    "native active test hides answer feedback and worked solutions",
+    "native submission marks all twenty questions with adjacent solution controls",
+    "native result review renders original question and worked solution",
+    "native app reload preserves completed state",
+    "native saved test remains in history after reload",
+    "native results and two question attempts persist without duplication"
+  ]
+}

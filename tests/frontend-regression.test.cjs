@@ -10,6 +10,7 @@ const {test} = require('node:test');
 const root = path.resolve(__dirname,'..');
 const html = fs.readFileSync(path.join(root,'web','index.html'),'utf8');
 const production = fs.readFileSync(path.join(root,'web','app.js'),'utf8').replace(/\r\n/g,'\n');
+const memoryScript = fs.readFileSync(path.join(root,'web','memory.js'),'utf8');
 const STORAGE = 'tmua-question-bank-progress-v1', LAST = 'tmua-question-bank-last-question-v1', RESET = 'tmua-question-bank-reset-v2';
 const ATTEMPT = 'tmua-question-bank-attempt-v2:', BOOKMARK = 'tmua-question-bank-bookmark-v2:';
 
@@ -80,11 +81,20 @@ function createApp({progress,storage = {},hash = '',historyThrows = false,storag
   if (browser) window.TMUA_BROWSER = browser;
   const location = {hash,protocol:'https:',reloads:0,reload(){this.reloads++;}};
   const fails = (setting) => typeof setting === 'function' ? setting() : setting;
-  const localStorage = {getItem:(key) => { if (fails(storageReadThrows)) throw new Error('Storage reads unavailable'); return entries.get(key) ?? null; },setItem:(key,value) => { if (fails(storageThrows)) throw new Error('Storage unavailable'); entries.set(key,String(value)); }};
+  let enumeratedKeys = [];
+  const localStorage = {
+    get length() { if (fails(storageReadThrows)) throw new Error('Storage reads unavailable'); enumeratedKeys = [...entries.keys()]; return enumeratedKeys.length; },
+    key:(index) => { if (fails(storageReadThrows)) throw new Error('Storage reads unavailable'); return enumeratedKeys[index] ?? null; },
+    getItem:(key) => { if (fails(storageReadThrows)) throw new Error('Storage reads unavailable'); return entries.get(key) ?? null; },
+    setItem:(key,value) => { if (fails(storageThrows)) throw new Error('Storage unavailable'); entries.set(key,String(value)); },
+    removeItem:(key) => { if (fails(storageThrows)) throw new Error('Storage unavailable'); entries.delete(key); },
+  };
+  window.localStorage = localStorage;
   const math = Object.create(Math); math.random = random;
   const context = vm.createContext({window,document,location,localStorage,history:{replaceState(_a,_b,fragment) { if (historyThrows) throw new Error('History unavailable'); location.hash = fragment; }},CSS:{escape:String},Date:ClockDate,Math:math,setTimeout:() => 1,clearTimeout(){},setInterval(fn){intervals.push(fn);},console});
-  const script = production.replace(/\n  initialize\(\);\n\}\)\(\);\s*$/, '\n  globalThis.testApp = {state,selectQuestion,filteredQuestions,applyFilters,clearFilters,elapsedSeconds,switchView};\n  initialize();\n})();');
+  const script = production.replace(/\n  initialize\(\);\n\}\)\(\);\s*$/, '\n  globalThis.testApp = {state,selectQuestion,filteredQuestions,applyFilters,clearFilters,elapsedSeconds,switchView,getMemory:() => memory};\n  initialize();\n})();');
   assert.ok(script !== production,'Harness must expose the current shipped app entry point');
+  vm.runInContext(memoryScript,context,{filename:'web/memory.js'});
   vm.runInContext(script,context,{filename:'frontend/app.js'});
   if (!allowError) assert.equal(document.getElementById('error').hidden,true,document.getElementById('error-detail').textContent);
   const get = (id) => document.getElementById(id);
@@ -96,9 +106,150 @@ function createApp({progress,storage = {},hash = '',historyThrows = false,storag
     }
     return result;
   }
-  return {app:context.testApp,document,window,location,entries,get,messages,advance:(ms) => { now += ms; for (const fn of intervals) fn(); },filter:(name,value) => { get(`${name}-filter`).value = value; get(`${name}-filter`).fire('change',{target:get(`${name}-filter`)}); },paper(value) { const button = get('paper-filter').querySelector(`[data-paper="${value}"]`) || document.querySelector(`[data-paper="${value}"]`); get('paper-filter').fire('click',{target:button}); },search(value) { get('search').value = value; get('search').fire('input',{target:get('search')}); },click(id) { const button = get(id); assert.ok(button,`Missing control ${id}`); assert.equal(button.disabled,false,`${id} must be enabled`); button.focus(); if (get('question-workspace').contains(button)) get('question-workspace').fire('click',{target:button}); else button.fire('click'); },choose(letter) { const button = get('question-workspace').querySelector(`[data-option="${letter}"]`); assert.ok(button); button.focus(); get('question-workspace').fire('click',{target:button}); },hash(fragment) { location.hash = fragment; for (const fn of handlers.hashchange || []) fn(); },fireWindow(type,event = {}) { for (const fn of handlers[type] || []) fn(event); },saved};
+  const memory = context.testApp.getMemory();
+  return {app:context.testApp,document,window,location,entries,get,messages,memory,advance:(ms) => { now += ms; for (const fn of intervals) fn(); },filter:(name,value) => { get(`${name}-filter`).value = value; get(`${name}-filter`).fire('change',{target:get(`${name}-filter`)}); },paper(value) { const button = get('paper-filter').querySelector(`[data-paper="${value}"]`) || document.querySelector(`[data-paper="${value}"]`); get('paper-filter').fire('click',{target:button}); },search(value) { get('search').value = value; get('search').fire('input',{target:get('search')}); },click(id) { const button = get(id); assert.ok(button,`Missing control ${id}`); assert.equal(button.disabled,false,`${id} must be enabled`); button.focus(); if (get('question-workspace').contains(button)) get('question-workspace').fire('click',{target:button}); else button.fire('click'); },choose(letter) { const button = get('question-workspace').querySelector(`[data-option="${letter}"]`); assert.ok(button); button.focus(); get('question-workspace').fire('click',{target:button}); },hash(fragment) { location.hash = fragment; for (const fn of handlers.hashchange || []) fn(); },fireWindow(type,event = {}) { for (const fn of handlers[type] || []) fn(event); },saved};
 }
 const marked = (selected = 'A',bookmarked = false) => ({selected,marked:true,correct:true,bookmarked});
+const history = (h,id) => JSON.parse(JSON.stringify(id ? h.memory.list(id) : h.memory.all()));
+
+test('practice history records every completed wrong and correct try with separate durations',() => {
+  const h = createApp();
+  assert.equal(history(h,'q1').length,0); h.choose('B'); h.click('bookmark-question');
+  assert.equal(history(h,'q1').length,0,'choosing and bookmarking do not finish a try');
+  h.advance(9000); h.click('mark-answer');
+  const first = history(h,'q1')[0];
+  assert.deepEqual([first.selected,first.outcome,first.correct,first.elapsedSeconds],['B','wrong',false,9]);
+  assert.equal(h.saved().q1.attemptId,first.id); assert.ok(h.get('attempt-history-table'));
+  assert.match(h.get('question-workspace').innerHTML,/<td>Wrong<\/td>|class="history-wrong">Wrong/);
+  assert.match(h.get('question-workspace').innerHTML,/<td>00:09<\/td>/);
+  h.get('question-workspace').fire('click',{target:h.get('mark-answer')}); h.fireWindow('focus');
+  assert.equal(history(h,'q1').length,1,'duplicate handlers and focus refresh cannot add another completed try');
+  h.click('retry-question'); assert.equal(history(h,'q1').length,1);
+  h.advance(4000); h.choose('A'); h.click('mark-answer');
+  const records = history(h,'q1'); assert.equal(records.length,2); assert.notEqual(records[0].id,records[1].id);
+  assert.deepEqual(records.map((entry) => [entry.selected,entry.outcome,entry.elapsedSeconds]),[['B','wrong',9],['A','correct',4]]);
+  assert.equal(h.saved().q1.attemptId,records[1].id);
+  assert.equal(h.get('question-workspace').querySelectorAll('[data-attempt-id]').length,2);
+  const reopened = createApp({storage:h.entries});
+  assert.deepEqual(history(reopened,'q1'),records); reopened.fireWindow('focus'); assert.equal(history(reopened,'q1').length,2);
+  assert.equal(reopened.get('question-workspace').querySelectorAll('[data-attempt-id]').length,2);
+});
+
+test('question navigation retains fractional draft time and excludes time spent on other questions',() => {
+  const h = createApp(); h.advance(1250); h.choose('B'); h.app.selectQuestion('q2');
+  assert.equal(JSON.parse(h.entries.get('tmua-question-bank-draft-v1:legacy:q1')).elapsedMs,1250);
+  h.advance(700); h.app.selectQuestion('q1'); h.advance(850); h.click('mark-answer');
+  assert.equal(history(h,'q1')[0].elapsedSeconds,2,'1250ms + 850ms remains one 2100ms try');
+  assert.equal(history(h,'q2').length,0);
+  h.app.selectQuestion('q2'); h.advance(350); h.fireWindow('pagehide');
+  const draft = JSON.parse(h.entries.get('tmua-question-bank-draft-v1:legacy:q2'));
+  assert.equal(draft.elapsedMs,1050,'700ms before navigation + 350ms after return');
+  const reopened = createApp({storage:h.entries}); assert.equal(reopened.app.state.currentId,'q2'); assert.equal(reopened.app.state.elapsedMs,1050);
+  reopened.advance(950); reopened.choose('A'); reopened.click('mark-answer');
+  assert.equal(history(reopened,'q2')[0].elapsedSeconds,2,'fractional milliseconds survive reload without rounding each visit');
+  assert.equal(history(reopened,'q2')[0].id,draft.id);
+});
+
+test('periodic and pagehide draft checkpoints resume the same try without recording incomplete work',() => {
+  const h = createApp(); h.advance(5700);
+  const checkpoint = JSON.parse(h.entries.get('tmua-question-bank-draft-v1:legacy:q1'));
+  assert.equal(checkpoint.elapsedMs,5700); assert.equal(history(h).length,0);
+  h.advance(300); h.fireWindow('pagehide');
+  assert.equal(JSON.parse(h.entries.get('tmua-question-bank-draft-v1:legacy:q1')).elapsedMs,6000);
+  const reopened = createApp({storage:h.entries}); assert.equal(reopened.app.elapsedSeconds(),6);
+  reopened.advance(1500); reopened.choose('A'); reopened.click('mark-answer');
+  assert.equal(history(reopened,'q1')[0].id,checkpoint.id); assert.equal(history(reopened,'q1')[0].elapsedSeconds,7);
+  const again = createApp({storage:h.entries}); assert.equal(history(again,'q1').length,1); assert.equal(again.app.elapsedSeconds(),7);
+});
+
+test('existing marked progress migrates once with unknown historic times shown honestly',() => {
+  const h = createApp({progress:{q1:marked('B'),q2:{...marked('A'),elapsedSeconds:23,updatedAt:'2026-10-31T10:00:00Z'}}});
+  assert.equal(history(h,'q1').length,1); assert.equal(history(h,'q1')[0].elapsedSeconds,null); assert.equal(history(h,'q1')[0].completedAt,null);
+  assert.match(h.get('question-workspace').innerHTML,/Earlier saved attempt/); assert.match(h.get('question-workspace').innerHTML,/Not recorded/);
+  assert.equal(history(h,'q1')[0].correct,false,'migration recalculates the official key rather than trusting saved correctness');
+  assert.equal(history(h,'q2')[0].elapsedSeconds,23); assert.equal(history(h,'q2')[0].completedAt,'2026-10-31T10:00:00.000Z');
+  const reopened = createApp({storage:h.entries}); assert.equal(history(reopened).length,2); assert.equal(history(reopened,'q1').length,1);
+  reopened.click('retry-question'); reopened.advance(2000); reopened.choose('A'); reopened.click('mark-answer');
+  const onceMore = createApp({storage:h.entries}); assert.equal(history(onceMore,'q1').length,2,'new marked records with attempt IDs must not migrate again');
+});
+
+test('reset clears current history and stale windows cannot restore completed tries or old draft time',() => {
+  const shared = new Map(), a = createApp({storage:shared}), b = createApp({storage:shared});
+  a.advance(9000); a.choose('B'); a.click('mark-answer'); assert.equal(history(a).length,1);
+  a.click('reset-progress'); assert.equal(history(a).length,0); assert.equal(a.app.elapsedSeconds(),0);
+  b.advance(8000); b.fireWindow('storage',{key:RESET}); assert.equal(history(b).length,0); assert.equal(b.app.elapsedSeconds(),0);
+  assert.equal(b.get('question-workspace').querySelectorAll('[data-attempt-id]').length,0);
+  b.app.selectQuestion('q2'); b.advance(3000); b.choose('A'); b.click('mark-answer');
+  assert.equal(history(b).length,1); assert.equal(history(b,'q2')[0].elapsedSeconds,3);
+  a.fireWindow('storage',{key:RESET}); assert.equal(history(a).length,1); assert.equal(history(a,'q1').length,0);
+  const reopened = createApp({storage:shared}); assert.equal(history(reopened).length,1); assert.equal(history(reopened,'q1').length,0);
+});
+
+test('temporarily denied writes retain visible session history and recover without duplicate attempts',() => {
+  let unavailable = true; const h = createApp({storageThrows:() => unavailable});
+  h.advance(5000); h.choose('B'); h.click('mark-answer');
+  assert.equal(history(h,'q1').length,1); assert.equal(history(h,'q1')[0].elapsedSeconds,5);
+  assert.match(h.get('question-workspace').innerHTML,/class="history-wrong">Wrong/);
+  unavailable = false; h.fireWindow('focus');
+  const reopened = createApp({storage:h.entries}); assert.equal(history(reopened,'q1').length,1);
+  assert.equal(history(reopened,'q1')[0].elapsedSeconds,5); assert.equal(history(reopened,'q1')[0].correct,false);
+});
+
+test('stale mark, answer and retry clicks after another tab resets cannot restore old progress',() => {
+  for (const action of ['mark','answer','retry']) {
+    const shared = new Map();
+    if (action === 'retry') shared.set(STORAGE,JSON.stringify({q1:{...marked('B'),elapsedSeconds:23}}));
+    const resetter = createApp({storage:shared}), stale = createApp({storage:shared});
+    if (action !== 'retry') { stale.advance(3000); stale.choose('B'); }
+    resetter.click('reset-progress');
+    if (action === 'mark') stale.click('mark-answer');
+    if (action === 'answer') stale.choose('A');
+    if (action === 'retry') stale.click('retry-question');
+    assert.equal(stale.saved().q1,undefined,`${action}: discard the stale action instead of saving it in the new generation`);
+    assert.equal(history(stale).length,0,`${action}: no old completed try enters new history`);
+    assert.equal(stale.app.elapsedSeconds(),0,`${action}: old draft time is discarded`);
+    assert.match(stale.get('toast').textContent,/reset in another tab/);
+    const reopened = createApp({storage:shared});
+    assert.equal(reopened.saved().q1,undefined); assert.equal(reopened.get('attempted-count').textContent,0); assert.equal(history(reopened).length,0);
+  }
+  const shared = new Map(), a = createApp({storage:shared}), b = createApp({storage:shared});
+  b.advance(4500); b.choose('B'); a.click('reset-progress');
+  b.app.selectQuestion('q2'); b.click('bookmark-question');
+  assert.equal(b.saved().q1,undefined,'explicit fresh navigation may continue after synchronizing the reset');
+  assert.equal(b.saved().q2.bookmarked,true); assert.equal(history(b).length,0);
+  b.advance(2000); b.choose('A'); b.click('mark-answer');
+  const reopened = createApp({storage:shared}); assert.equal(reopened.saved().q1,undefined); assert.equal(reopened.saved().q2.marked,true); assert.equal(reopened.app.state.progress.q2.correct,true);
+  assert.equal(history(reopened).length,1); assert.equal(history(reopened,'q2')[0].elapsedSeconds,2);
+});
+
+test('focus-only storage recovery persists latest progress alongside history and saves pending reset first',() => {
+  let blocked = true; const h = createApp({storageThrows:() => blocked});
+  h.advance(5000); h.choose('B'); h.click('mark-answer'); blocked = false; h.fireWindow('focus');
+  let reopened = createApp({storage:h.entries});
+  assert.equal(reopened.saved().q1.marked,true); assert.equal(reopened.saved().q1.selected,'B'); assert.equal(reopened.app.state.progress.q1.correct,false); assert.equal(reopened.saved().q1.elapsedSeconds,5);
+  assert.equal(reopened.get('attempted-count').textContent,1); assert.equal(history(reopened,'q1').length,1);
+  assert.equal(reopened.saved().q1.attemptId,history(reopened,'q1')[0].id);
+  blocked = true; h.click('reset-progress'); h.advance(2000); h.choose('A'); h.click('mark-answer');
+  blocked = false; h.fireWindow('focus'); reopened = createApp({storage:h.entries});
+  assert.notEqual(h.entries.get(RESET),'legacy'); assert.equal(reopened.saved().q1.selected,'A'); assert.equal(reopened.app.state.progress.q1.correct,true); assert.equal(reopened.saved().q1.elapsedSeconds,2);
+  assert.equal(reopened.get('attempted-count').textContent,1); assert.equal(history(reopened).length,1);
+  assert.equal(history(reopened,'q1')[0].outcome,'correct'); assert.equal(history(reopened,'q1')[0].elapsedSeconds,2);
+});
+
+test('active Practice and hash-route navigation preserve uncheckpointed fractional question time',() => {
+  const h = createApp(); h.advance(2500); h.click('practice-tab');
+  assert.equal(h.app.elapsedSeconds(),2); assert.equal(h.app.state.elapsedMs,2500);
+  const firstId = JSON.parse(h.entries.get('tmua-question-bank-draft-v1:legacy:q1')).id;
+  h.advance(500); h.click('practice-tab'); assert.equal(h.app.state.elapsedMs,3000);
+  h.advance(1500); h.choose('A'); h.click('mark-answer');
+  assert.equal(history(h,'q1')[0].elapsedSeconds,4); assert.equal(history(h,'q1')[0].id,firstId);
+  const routes = createApp(); routes.advance(2700); routes.hash('#q2');
+  assert.equal(JSON.parse(routes.entries.get('tmua-question-bank-draft-v1:legacy:q1')).elapsedMs,2700);
+  routes.advance(650); routes.hash('#q1'); assert.equal(routes.app.state.elapsedMs,2700);
+  assert.equal(JSON.parse(routes.entries.get('tmua-question-bank-draft-v1:legacy:q2')).elapsedMs,650);
+  routes.advance(400); routes.choose('B'); routes.click('mark-answer');
+  assert.equal(history(routes,'q1')[0].elapsedSeconds,3); assert.equal(history(routes,'q2').length,0);
+});
 
 test('marking inside Not attempted keeps feedback and navigates from the reviewed position',() => {
   const h = createApp(); h.filter('status','unattempted'); h.app.selectQuestion('q4'); h.choose('A'); h.click('mark-answer');

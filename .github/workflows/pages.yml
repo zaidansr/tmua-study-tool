@@ -23,7 +23,7 @@ jobs:
         with:
           node-version: '22'
       - name: Frontend and metadata tests
-        run: node --test tests/frontend-regression.test.cjs tests/browser-store.test.mjs tests/public-metadata.test.mjs
+        run: node --test tests/frontend-regression.test.cjs tests/browser-store.test.mjs tests/public-metadata.test.mjs tests/memory.test.cjs tests/test-mode.test.cjs
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Package public web app

@@ -7,12 +7,13 @@
   <meta name="description" content="Practise official TMUA past-paper questions individually, check your answers and study the original worked solutions.">
   <title>TMUA Question Bank</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="test-mode.css">
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to questions</a>
   <header class="site-header">
     <a class="brand" href="#" aria-label="TMUA question bank home"><span class="brand-mark" aria-hidden="true">∴</span><span>TMUA<span class="brand-sub">question bank</span></span></a>
-    <nav class="nav" aria-label="Main navigation"><button class="nav-link active" id="practice-tab" type="button">Practice</button><button class="nav-link" id="sources-tab" type="button">Papers & sources</button></nav>
+    <nav class="nav" aria-label="Main navigation"><button class="nav-link active" id="practice-tab" type="button">Practice</button><button class="nav-link" id="test-tab" type="button">Test mode</button><button class="nav-link" id="sources-tab" type="button">Papers & sources</button></nav>
   </header>
   <div id="loading" class="loading-state" role="status"><p>Loading questions…</p></div>
   <main id="setup" class="loading-state" hidden>
@@ -48,6 +49,7 @@
         <div id="empty-state" class="empty-state" hidden><span aria-hidden="true">⌕</span><h2>No matching questions</h2><p>Try another topic, a different year or a shorter search.</p><button id="empty-clear" class="button" type="button">Clear filters</button></div>
       </main>
     </div>
+    <main id="test-view" hidden tabindex="-1" aria-label="Paper test mode"></main>
     <main id="sources-view" class="sources-content" hidden tabindex="-1">
       <h1>Papers &amp; solutions</h1>
       <div class="source-callout"><span class="source-icon" aria-hidden="true">↗</span><div><h2>Official TMUA preparation materials</h2><p id="coverage-note"></p><a id="official-source" href="https://esat-tmua.ac.uk/tmua-preparation-materials/" target="_blank" rel="noopener noreferrer">Visit UAT-UK’s archive ↗</a></div></div>
@@ -70,6 +72,8 @@
   <input id="import-papers-files" type="file" accept=".pdf,application/pdf" multiple hidden aria-label="Choose original official PDF files">
   <script src="data/questions.js" defer></script>
   <script src="browser-bootstrap.js" defer></script>
+  <script src="memory.js" defer></script>
+  <script src="test-mode.js" defer></script>
   <script src="app.js" defer></script>
   <script src="pdf-renderer.mjs" type="module"></script>
 </body>

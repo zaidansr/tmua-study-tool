@@ -8,11 +8,12 @@
   const ATTEMPT_PREFIX = 'tmua-question-bank-attempt-v2:';
   const BOOKMARK_PREFIX = 'tmua-question-bank-bookmark-v2:';
   const DRAFT_PREFIX = 'tmua-question-bank-draft-v1:';
+  const RANDOM_SESSION_PREFIX = 'tmua-random-session-v1:';
   const PAGE_SIZE = 15;
   const escape = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const icon = (name, filled = false) => name === 'bookmark' ? `<svg viewBox="0 0 24 24" fill="${filled ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 4h12v17l-6-4-6 4z"/></svg>` : '';
   const state = {data: null, progress: {}, currentId: null, listPage: 0, filters: {paper:'all',year:'all',topic:'all',status:'all',search:''}, reveal: false, startedAt: Date.now(), elapsedMs: 0, timerRunning: false, view: 'practice', toastTimeout: null};
-  let memory, testController, practiceAttemptId = null, lastCheckpoint = 0;
+  let memory, testController, randomController, practiceAttemptId = null, lastCheckpoint = 0;
   const draftCache = new Map();
   let knownMemoryEvents = new Set();
   let saveWarningShown = false;
@@ -77,9 +78,10 @@
       const current = currentQuestion() ? record(currentQuestion()) : {};
       if (generation !== previousGeneration || JSON.stringify([previous.selected,previous.marked,previous.elapsedSeconds,previous.attemptId]) !== JSON.stringify([current.selected,current.marked,current.elapsedSeconds,current.attemptId])) { state.reveal = false; resetTimer(currentQuestion()); }
       memory?.flush();
+      randomController?.refresh();
       if (memory) knownMemoryEvents = new Set(memory.all().map((entry) => `${entry.questionId}:${entry.id}`));
       testController?.refresh();
-      if (render && !testController?.isActive()) { renderSummary(); if (!currentQuestion() && filteredQuestions().length) applyFilters(); else { renderList(); renderQuestion(); } }
+      if (render && !testController?.isActive()) { renderSummary(); if (state.view === 'random') { renderRandomStatus(); renderQuestion(); } else if (!currentQuestion() && filteredQuestions().length) applyFilters(); else { renderList(); renderQuestion(); } }
     } catch (_) { /* Keep the session usable when reads are unavailable. */ }
   }
   function saveProgress(q,kind,value) {
@@ -100,6 +102,7 @@
     pendingWrites.clear(); draftCache.clear(); knownMemoryEvents.clear(); legacyProgress = {}; pendingReset = true; state.progress = Object.create(null);
     try { localStorage.setItem(RESET_KEY,progressGeneration); pendingReset = false; } catch (_) { storageWarning(); }
     testController?.reset();
+    randomController?.reset();
   }
   function record(q) { return state.progress[q.id] || {}; }
   function answerOf(q) { return typeof q.answer === 'string' ? q.answer.trim().toUpperCase() : ''; }
@@ -171,7 +174,7 @@
   function updateQuestionMarkup(workspace,id,markup) {
     // Keep an online PDF viewer mounted when checking an answer or bookmarking;
     // replacing its iframe would reset its page/zoom and start it loading again.
-    if (window.TMUA_BROWSER && workspace.dataset.questionId === id) {
+    if (window.TMUA_BROWSER && workspace.dataset.questionId === id && workspace.dataset.view === state.view) {
       const template = document.createElement('template');
       if (template.content) {
         template.innerHTML = markup;
@@ -185,7 +188,7 @@
         return;
       }
     }
-    workspace.innerHTML = markup; workspace.dataset.questionId = id;
+    workspace.innerHTML = markup; workspace.dataset.questionId = id; workspace.dataset.view = state.view;
   }
   function imageMarkup(paths, description, {testMode = false} = {}) {
     return (paths || []).map((region, index) => {
@@ -216,7 +219,7 @@
     const q = currentQuestion(), workspace = $('question-workspace');
     const focused = workspace.contains(document.activeElement) ? document.activeElement : null;
     const focusId = focused?.id, focusOption = focused?.dataset?.option;
-    if (!q) { workspace.innerHTML = ''; $('empty-state').hidden = false; return; }
+    if (!q) { workspace.innerHTML = ''; delete workspace.dataset.questionId; $('empty-state').hidden = state.view === 'random'; return; }
     $('empty-state').hidden = true;
     const p = currentPaper(q), r = record(q), questions = filteredQuestions(), index = questions.findIndex((item) => item.id === q.id);
     const navigation = navigationQuestions(q);
@@ -233,7 +236,7 @@
     }).join('');
     const feedback = marked ? `<div class="feedback${r.correct ? '' : ' incorrect'}" role="status"><span class="feedback-icon" aria-hidden="true">${r.correct ? '✓' : '↺'}</span><span><strong>${r.correct ? 'Correct.' : 'Incorrect.'}</strong> ${r.correct ? `Answer ${escape(answer)}.` : `You chose ${escape(selected)}. Answer ${escape(answer)}.`}</span></div>` : '';
     const solution = state.reveal ? `<section class="solution-panel" aria-label="Worked solution"><div class="solution-heading"><h3>Worked solution</h3>${solutionLink ? `<a href="${escape(solutionLink)}" target="_blank" rel="noopener noreferrer">Open original solution ↗</a>` : ''}</div>${(q.solutionImages || []).length ? `<div class="solution-images">${imageMarkup(q.solutionImages, `Official worked solution for ${yearLabel(q)} ${paperLabel(q)}, Question ${q.number}`)}</div>` : `<p class="no-image">${solutionLink ? `The worked solution is available in the <a href="${escape(solutionLink)}" target="_blank" rel="noopener noreferrer">original PDF ↗</a>.` : 'A worked solution is not available for this question.'}</p>`}<p class="solution-note">Original official worked solution. ${q.solutionPages?.length ? `PDF page${q.solutionPages.length > 1 ? 's' : ''} ${escape(q.solutionPages.join(', '))}.` : ''}</p></section>` : '';
-    updateQuestionMarkup(workspace,q.id,`<article class="question-card"><div class="question-toolbar"><div class="question-meta"><span class="badge year-badge">${escape(yearLabel(q))}</span><span class="badge">${paperLabel(q)}</span><span class="question-number">Question ${escape(q.number)}</span></div><div class="question-tools"><span class="timer" id="question-timer" aria-label="Time on current attempt">${elapsedTime()}</span><button id="bookmark-question" class="icon-button${r.bookmarked ? ' bookmarked' : ''}" type="button" aria-label="${r.bookmarked ? 'Remove bookmark' : 'Bookmark question'}" aria-pressed="${Boolean(r.bookmarked)}">${icon('bookmark',r.bookmarked)}<span>${r.bookmarked ? 'Saved' : 'Save'}</span></button></div></div><div class="question-body"><div class="topic-line"><h2>${escape(topicLabel(q))}</h2><span class="paper-type">${Number(q.paper) === 1 ? 'Mathematical Thinking' : 'Mathematical Reasoning'}</span></div><div class="question-images">${(q.images || []).length ? imageMarkup(q.images, questionDescription) : `<div class="text-fallback">${escape(q.text || 'Open the original paper to read this question.')}</div>`}</div>${q.text ? `<details class="question-text"><summary>Read extracted text</summary><pre>${escape(q.text)}</pre></details>` : ''}<div class="answer-section"><p class="answer-label">YOUR ANSWER</p><div class="answer-options" role="group" aria-label="Choose your answer">${optionMarkup}</div><div class="question-action-bar"><button id="mark-answer" class="button primary" type="button"${!selected || marked || !answer ? ' disabled' : ''}>${marked ? 'Answer checked' : !answer ? 'Answer key unavailable' : 'Check answer'}<span aria-hidden="true">↗</span></button><button id="reveal-solution" class="reveal-button" type="button" aria-expanded="${state.reveal}">${state.reveal ? 'Hide worked solution' : 'Show worked solution'}</button>${marked ? '<button id="retry-question" class="text-button" type="button">Try again</button>' : ''}</div>${feedback}</div></div>${solution}${attemptHistory(q)}<div class="question-bottom">${questionLink ? `<a class="original-link" href="${escape(questionLink)}" target="_blank" rel="noopener noreferrer">Original question paper ↗</a>` : '<span></span>'}<span class="position-note">${index >= 0 ? `${index + 1} of ${questions.length} matching questions` : 'Reviewed · no longer matches this filter'}</span></div></article><nav class="question-navigation" aria-label="Question navigation"><button id="previous-question" class="nav-button" type="button"${!navigation.previous ? ' disabled' : ''}>← Previous</button><button id="random-question" class="random-button" type="button"${!navigation.random.length ? ' disabled' : ''}><span aria-hidden="true">⤨</span> Surprise me</button><button id="next-question" class="nav-button next" type="button"${!navigation.next ? ' disabled' : ''}>Next question →</button></nav>`);
+    updateQuestionMarkup(workspace,q.id,`<article class="question-card"><div class="question-toolbar"><div class="question-meta"><span class="badge year-badge">${escape(yearLabel(q))}</span><span class="badge">${paperLabel(q)}</span><span class="question-number">Question ${escape(q.number)}</span></div><div class="question-tools"><span class="timer" id="question-timer" aria-label="Time on current attempt">${elapsedTime()}</span><button id="bookmark-question" class="icon-button${r.bookmarked ? ' bookmarked' : ''}" type="button" aria-label="${r.bookmarked ? 'Remove bookmark' : 'Bookmark question'}" aria-pressed="${Boolean(r.bookmarked)}">${icon('bookmark',r.bookmarked)}<span>${r.bookmarked ? 'Saved' : 'Save'}</span></button></div></div><div class="question-body"><div class="topic-line"><h2>${escape(topicLabel(q))}</h2><span class="paper-type">${Number(q.paper) === 1 ? 'Mathematical Thinking' : 'Mathematical Reasoning'}</span></div><div class="question-images">${(q.images || []).length ? imageMarkup(q.images, questionDescription) : `<div class="text-fallback">${escape(q.text || 'Open the original paper to read this question.')}</div>`}</div>${q.text ? `<details class="question-text"><summary>Read extracted text</summary><pre>${escape(q.text)}</pre></details>` : ''}<div class="answer-section"><p class="answer-label">YOUR ANSWER</p><div class="answer-options" role="group" aria-label="Choose your answer">${optionMarkup}</div><div class="question-action-bar"><button id="mark-answer" class="button primary" type="button"${!selected || marked || !answer ? ' disabled' : ''}>${marked ? 'Answer checked' : !answer ? 'Answer key unavailable' : 'Check answer'}<span aria-hidden="true">↗</span></button><button id="reveal-solution" class="reveal-button" type="button" aria-expanded="${state.reveal}">${state.reveal ? 'Hide worked solution' : 'Show worked solution'}</button>${marked && state.view !== 'random' ? '<button id="retry-question" class="text-button" type="button">Try again</button>' : ''}</div>${feedback}</div></div>${solution}${attemptHistory(q)}<div class="question-bottom">${questionLink ? `<a class="original-link" href="${escape(questionLink)}" target="_blank" rel="noopener noreferrer">Original question paper ↗</a>` : '<span></span>'}<span class="position-note">${index >= 0 ? `${index + 1} of ${questions.length} matching questions` : 'Reviewed · no longer matches this filter'}</span></div></article><nav class="question-navigation" aria-label="Question navigation"${state.view === 'random' ? ' hidden' : ''}><button id="previous-question" class="nav-button" type="button"${!navigation.previous ? ' disabled' : ''}>← Previous</button><button id="random-question" class="random-button" type="button">Random mode</button><button id="next-question" class="nav-button next" type="button"${!navigation.next ? ' disabled' : ''}>Next question →</button></nav>`);
     window.TMUA_PDFRenderer?.mount(workspace);
     window.TMUA_BROWSER?.rewriteLinks(workspace);
     if (focused) {
@@ -270,7 +273,7 @@
   }
   function resumeTimer() {
     const q = currentQuestion();
-    if (!state.timerRunning && q && !record(q).marked && state.view === 'practice' && !document.hidden) { state.startedAt = Date.now(); state.timerRunning = true; }
+    if (!state.timerRunning && q && !record(q).marked && ['practice','random'].includes(state.view) && !document.hidden) { state.startedAt = Date.now(); state.timerRunning = true; }
   }
   function resetTimer(q) {
     state.timerRunning = false;
@@ -321,26 +324,78 @@
     document.querySelectorAll('[data-paper]').forEach((button) => { const selected = button.dataset.paper === 'all'; button.classList.toggle('selected',selected); button.setAttribute('aria-pressed',String(selected)); });
     applyFilters();
   }
+  function randomIds() { return state.data.questions.map((q) => q.id); }
+  function randomSession() {
+    const key = `${RANDOM_SESSION_PREFIX}${progressGeneration}`;
+    try { return parseObject(pendingWrites.get(key) ?? localStorage.getItem(key)); } catch (_) { return {}; }
+  }
+  function saveRandomSession(active = state.view === 'random') {
+    pendingWrites.set(`${RANDOM_SESSION_PREFIX}${progressGeneration}`,JSON.stringify({active,questionId:active ? state.currentId : null}));
+    flushProgressWrites();
+  }
+  function randomSettings() {
+    const settings = randomController.settings();
+    $('random-wrong-minutes').value = settings.wrongMinutes;
+    $('random-correct-minutes').value = settings.correctMinutes;
+  }
+  function renderRandomStatus() {
+    if (!randomController || state.view !== 'random') return;
+    const summary = randomController.summary(randomIds());
+    $('random-status').textContent = `${summary.fresh} new · ${summary.pending + summary.due} scheduled · ${summary.completed} complete`;
+    $('random-due').textContent = summary.due ? `${summary.due} review${summary.due === 1 ? '' : 's'} ready` : summary.nextDueAt ? `Next review in ${durationLabel(Math.max(0,Math.ceil((summary.nextDueAt-Date.now())/1000)))}` : 'No reviews waiting';
+    $('random-wait').hidden = Boolean(currentQuestion());
+    $('random-wait-message').textContent = summary.pending ? 'Your next review will appear here when it is due. You can leave and return later.' : 'Every question has been answered correctly. Your attempt history is saved.';
+  }
+  function freshPracticeAttempt(q) {
+    const draft = loadDraft(q,true);
+    saveProgress(q,'attempt',{selected:'',marked:false,elapsedSeconds:0,attemptId:draft.id,updatedAt:new Date().toISOString()});
+    state.reveal = false; resetTimer(q); persistDraft(q);
+  }
+  function nextRandomQuestion() {
+    if (testController?.isActive() || state.view !== 'random' || !allowPracticeAction()) return;
+    randomController.refresh();
+    const id = randomController.next(randomIds(),{excludeId:state.currentId}) || randomController.next(randomIds());
+    pauseTimer();
+    if (id) { selectQuestion(id,{scroll:true}); freshPracticeAttempt(currentQuestion()); }
+    else { state.currentId = null; state.reveal = false; resetTimer(null); }
+    saveRandomSession(); renderSummary(); renderList(); renderQuestion(); renderRandomStatus();
+  }
+  function startRandomMode({resume = false} = {}) {
+    if (testController?.isActive()) { notify('Submit your test before leaving this paper.'); return; }
+    if (!randomController || (state.view === 'random' && !resume)) return;
+    if (resetChanged()) refreshProgress({render:false});
+    const saved = resume ? randomSession() : {};
+    pauseTimer(); showView('random'); randomSettings();
+    if (saved.active === true && state.data.questions.some((q) => q.id === saved.questionId)) {
+      selectQuestion(saved.questionId); resetTimer(currentQuestion()); renderQuestion(); renderRandomStatus();
+    } else { nextRandomQuestion(); }
+  }
   function showView(view) {
     state.view = view;
-    for (const name of ['practice','sources','test']) {
-      if ($(`${name}-view`)) $(`${name}-view`).hidden = view !== name;
+    for (const name of ['practice','sources','test','random']) {
+      if ($(`${name}-view`)) $(`${name}-view`).hidden = name === 'practice' ? !['practice','random'].includes(view) : view !== name;
       if ($(`${name}-tab`)) $(`${name}-tab`).classList.toggle('active',view === name);
     }
+    $('practice-view').classList.toggle('random-layout',view === 'random');
+    $('random-mode-panel').hidden = view !== 'random';
+    $('random-wait').hidden = view !== 'random' || Boolean(currentQuestion());
   }
   function switchView(view) {
     if (testController?.isActive() && view !== 'test') { notify('Submit your test before leaving this paper.'); return; }
+    if (view === 'random') { startRandomMode(); return; }
+    if (state.view === 'random') saveRandomSession(false);
     pauseTimer();
     showView(view);
-    if (view === 'practice') { resetTimer(currentQuestion()); renderSummary(); renderList(); renderQuestion(); if (state.currentId) updateFragment(state.currentId); }
+    if (view === 'practice') { if (!currentQuestion()) selectQuestion(filteredQuestions()[0]?.id || state.data.questions[0].id); resetTimer(currentQuestion()); renderSummary(); renderList(); renderQuestion(); if (state.currentId) updateFragment(state.currentId); }
     if (view === 'sources') $('sources-view').focus({preventScroll:true});
     if (view === 'test') testController?.open();
   }
   function testActivityChanged(active) {
-    for (const id of ['practice-tab','sources-tab']) $(id).disabled = active;
+    for (const id of ['practice-tab','random-tab','sources-tab']) $(id).disabled = active;
     document.querySelector('.brand').setAttribute('aria-disabled',String(active));
     if ($('browser-paper-bar')) $('browser-paper-bar').hidden = active || !window.TMUA_BROWSER;
     if (active) {
+      if (state.view === 'random') saveRandomSession(false);
       pauseTimer(); state.reveal = false;
       for (const id of ['image-dialog','paper-manager']) { const dialog = $(id); if (dialog?.open && typeof dialog.close === 'function') dialog.close(); }
       const workspace = $('question-workspace'); workspace.innerHTML = ''; delete workspace.dataset.questionId;
@@ -382,6 +437,16 @@
     $('list-next').addEventListener('click',() => { state.listPage++; renderList(); });
     $('question-list').addEventListener('click',(e) => { const row = e.target.closest('[data-question]'); if (row) selectQuestion(row.dataset.question,{scroll:true}); });
     $('practice-tab').addEventListener('click',() => switchView('practice'));
+    $('random-tab').addEventListener('click',() => switchView('random'));
+    $('random-next').addEventListener('click',nextRandomQuestion);
+    $('random-stop').addEventListener('click',() => switchView('practice'));
+    $('random-settings-form').addEventListener('submit',(event) => {
+      event.preventDefault();
+      if (testController?.isActive() || state.view !== 'random') return;
+      const settings = randomController.saveSettings({wrongMinutes:Number($('random-wrong-minutes').value),correctMinutes:Number($('random-correct-minutes').value)});
+      $('random-settings-status').textContent = settings ? 'Saved. Waiting reviews now use these intervals.' : 'Enter whole minutes from 1 to 1440.';
+      renderRandomStatus();
+    });
     $('test-tab').addEventListener('click',() => switchView('test'));
     $('sources-tab').addEventListener('click',() => switchView('sources'));
     $('source-shortcut').addEventListener('click',() => switchView('sources'));
@@ -395,18 +460,19 @@
       if (optionButton && !record(q).marked) { const selected = optionButton.dataset.option; if (!optionsOf(q).map((option) => option.trim().toUpperCase()).includes(selected)) return; saveProgress(q,'attempt',{...record(q),selected,attemptId:practiceAttemptId,updatedAt:new Date().toISOString()}); persistDraft(q); renderQuestion(); return; }
       const button = e.target.closest('button'); if (!button) return;
       if (button.id === 'bookmark-question') { const previous = record(q); saveProgress(q,'bookmark',{bookmarked:!previous.bookmarked}); if (previous.marked !== record(q).marked || previous.selected !== record(q).selected) resetTimer(q); renderSummary(); renderList(); renderQuestion(); }
-      if (button.id === 'mark-answer') { const r = record(q), answer = answerOf(q); if (!r.selected || r.marked || !answer) return; pauseTimer(); const completedAt = new Date().toISOString(), elapsed = elapsedSeconds(), id = practiceAttemptId || newAttemptId(); memory?.append({id,questionId:q.id,selected:r.selected,elapsedSeconds:elapsed,mode:'practice',completedAt}); saveProgress(q,'attempt',{...r,marked:true,elapsedSeconds:elapsed,updatedAt:completedAt,attemptId:id}); renderSummary(); renderList(); renderQuestion(); }
+      if (button.id === 'mark-answer') { const r = record(q), answer = answerOf(q); if (!r.selected || r.marked || !answer) return; pauseTimer(); const completedAt = new Date().toISOString(), elapsed = elapsedSeconds(), id = practiceAttemptId || newAttemptId(); memory?.append({id,questionId:q.id,selected:r.selected,elapsedSeconds:elapsed,mode:'practice',completedAt}); saveProgress(q,'attempt',{...r,marked:true,elapsedSeconds:elapsed,updatedAt:completedAt,attemptId:id}); if (state.view === 'random') randomController.record({id,questionId:q.id,correct:r.selected === answer,completedAt}); renderSummary(); renderList(); renderQuestion(); renderRandomStatus(); }
       if (button.id === 'reveal-solution') { state.reveal = !state.reveal; renderQuestion(); if (state.reveal) $('question-workspace').querySelector('.solution-panel')?.scrollIntoView({behavior:'smooth',block:'nearest'}); }
-      if (button.id === 'retry-question') { const draft = loadDraft(q,true); saveProgress(q,'attempt',{selected:'',marked:false,elapsedSeconds:0,attemptId:draft.id,updatedAt:new Date().toISOString()}); state.reveal = false; resetTimer(q); persistDraft(q); renderSummary(); renderList(); renderQuestion(); }
-      if (['previous-question','next-question','random-question'].includes(button.id)) { const navigation = navigationQuestions(q); const next = button.id === 'random-question' ? navigation.random[Math.floor(Math.random() * navigation.random.length)] : button.id === 'next-question' ? navigation.next : navigation.previous; if (next) selectQuestion(next.id,{scroll:true}); }
+      if (button.id === 'retry-question' && state.view !== 'random') { freshPracticeAttempt(q); renderSummary(); renderList(); renderQuestion(); }
+      if (button.id === 'random-question') startRandomMode();
+      if (['previous-question','next-question'].includes(button.id) && state.view !== 'random') { const navigation = navigationQuestions(q); const next = button.id === 'next-question' ? navigation.next : navigation.previous; if (next) selectQuestion(next.id,{scroll:true}); }
     });
     window.addEventListener('hashchange',() => { if (testController?.isActive()) return; let id; try { id = decodeURIComponent(location.hash.slice(1)); } catch (_) { return; } if (state.data.questions.some((q) => q.id === id)) { switchView('practice'); if (!filteredQuestions().some((q) => q.id === id)) clearFilters(); selectQuestion(id); } });
-    window.addEventListener('storage',(e) => { if (e.storageArea && e.storageArea !== localStorage) return; if (e.key === null || e.key === STORAGE_KEY || e.key === RESET_KEY || e.key?.startsWith(ATTEMPT_PREFIX) || e.key?.startsWith(BOOKMARK_PREFIX) || e.key?.startsWith('tmua-question-bank-history-') || e.key?.startsWith('tmua-test-')) refreshProgress(); });
+    window.addEventListener('storage',(e) => { if (e.storageArea && e.storageArea !== localStorage) return; if (e.key === null || e.key === STORAGE_KEY || e.key === RESET_KEY || e.key?.startsWith(ATTEMPT_PREFIX) || e.key?.startsWith(BOOKMARK_PREFIX) || e.key?.startsWith('tmua-question-bank-history-') || e.key?.startsWith('tmua-test-') || randomController?.isStorageKey(e.key)) refreshProgress(); });
     window.addEventListener('focus',() => refreshProgress());
     document.addEventListener('visibilitychange',() => { if (document.hidden) pauseTimer(); else { refreshProgress(); resumeTimer(); } });
     window.addEventListener('pagehide',pauseTimer);
     document.addEventListener('keydown',(e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); if (testController?.isActive()) return; switchView('practice'); $('search').focus(); } });
-    setInterval(() => { const timer = $('question-timer'); if (timer) timer.textContent = elapsedTime(); if (state.timerRunning && Date.now()-lastCheckpoint >= 5000) persistDraft(); }, 1000);
+    setInterval(() => { const timer = $('question-timer'); if (timer) timer.textContent = elapsedTime(); if (state.timerRunning && Date.now()-lastCheckpoint >= 5000) persistDraft(); if (state.view === 'random') { renderRandomStatus(); if (!document.hidden && !currentQuestion() && randomController.summary(randomIds()).due) nextRandomQuestion(); } }, 1000);
   }
   async function initialize() {
     if (window.TMUA_BOOT) await window.TMUA_BOOT;
@@ -445,6 +511,7 @@
       normalizeProgress();
       refreshProgress({render:false});
       memory = window.TMUA_Memory?.create({getGeneration:() => progressGeneration,getQuestion:(id) => state.data.questions.find((q) => q.id === id),onStorageError:storageWarning});
+      randomController = window.TMUA_RandomMode?.create({getGeneration:() => progressGeneration,getQuestion:(id) => state.data.questions.find((q) => q.id === id),onStorageError:storageWarning});
       for (const q of state.data.questions) memory?.migrate(q,record(q));
       if (memory) knownMemoryEvents = new Set(memory.all().map((entry) => `${entry.questionId}:${entry.id}`));
       const years = [...new Set(data.questions.map((q) => String(q.year)))].sort((a,b) => (Number(b) || 0) - (Number(a) || 0));
@@ -483,6 +550,7 @@
       selectQuestion(ids.has(hashId) ? hashId : ids.has(lastId) ? lastId : data.questions[0].id);
       testController = window.TMUA_TestMode?.create({data,host:$('test-view'),renderImages:imageMarkup,getGeneration:() => progressGeneration,onActiveChange:testActivityChanged,onComplete:recordTestAttempts,onBack:() => switchView('practice'),onStorageError:storageWarning});
       if (testController && $('test-view').querySelector('#test-results')) { pauseTimer(); showView('test'); }
+      else if (!testController?.isActive() && randomSession().active === true) startRandomMode({resume:true});
       $('loading').hidden = true; $('app').hidden = false;
     } catch (error) {
       $('loading').hidden = true; $('error').hidden = false;

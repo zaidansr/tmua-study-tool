@@ -18,6 +18,14 @@ Open **Test mode**, choose one paper and a time limit, then start. The default i
 
 History, active tests, responses and progress stay in this browser or app profile on this device. Clearing site data removes them. Browser and desktop profiles are separate.
 
+## Random mode
+
+Open **Random mode** from the navigation or the button below a practice question. It picks from the full question bank. A wrong answer schedules the question for **8 minutes** later. A correct review schedules it for **20 minutes** later; another wrong answer restarts the shorter interval. Once a question has been missed, later correct reviews keep using the longer interval. A question answered correctly on its first random-mode try leaves the queue.
+
+Due reviews take priority when you select **Next question**. The current question stays on screen while you work or read feedback. If every available question is finished or waiting, the next due review appears automatically while the waiting page is open. Review deadlines continue while the app is closed, and the active question, attempt history and queue survive reloads.
+
+Expand **Settings** in Random mode to change either interval (whole minutes from 1 to 1440). Changes also update waiting reviews from their last checked time. Random-mode scheduling uses answers checked in Random mode; ordinary practice and timed tests keep their existing behaviour. **Reset progress** clears the queue together with attempts, tests and bookmarks, while retaining interval settings.
+
 ## Download and use
 
 1. Download `TMUA-Study-Tool-windows-x64.zip` from [Releases](https://github.com/zaidansr/tmua-study-tool/releases/latest).

@@ -11,6 +11,7 @@ const root = path.resolve(__dirname,'..');
 const html = fs.readFileSync(path.join(root,'web','index.html'),'utf8');
 const production = fs.readFileSync(path.join(root,'web','app.js'),'utf8').replace(/\r\n/g,'\n');
 const memoryScript = fs.readFileSync(path.join(root,'web','memory.js'),'utf8');
+const randomScript = fs.readFileSync(path.join(root,'web','random-mode.js'),'utf8');
 const STORAGE = 'tmua-question-bank-progress-v1', LAST = 'tmua-question-bank-last-question-v1', RESET = 'tmua-question-bank-reset-v2';
 const ATTEMPT = 'tmua-question-bank-attempt-v2:', BOOKMARK = 'tmua-question-bank-bookmark-v2:';
 
@@ -71,14 +72,19 @@ class Document {
 function fixture() {
   return {meta:{},papers:[{id:'2023-p1',year:'2023',paper:1,questionPdf:'papers/question.pdf',solutionPdf:'papers/solution.pdf'}],questions:Array.from({length:8},(_,i) => ({id:`q${i + 1}`,year:'2023',paper:1,number:i + 1,paperId:'2023-p1',topic:i < 4 ? 'Algebra' : 'Logic',text:`Question ${i + 1}`,options:['A','B','C','D'],answer:'A',images:[],solutionImages:[]}))};
 }
-function createApp({progress,storage = {},hash = '',historyThrows = false,storageThrows = false,storageReadThrows = false,data = fixture(),allowError = false,random = Math.random,contentReady = true,browser} = {}) {
+function createApp({progress,storage = {},hash = '',historyThrows = false,storageThrows = false,storageReadThrows = false,data = fixture(),allowError = false,random = Math.random,contentReady = true,browser,startAt = 100000,testMode = false} = {}) {
   const document = new Document(), handlers = {}, entries = storage instanceof Map ? storage : new Map(Object.entries(storage)), intervals = [];
   if (progress !== undefined) entries.set(STORAGE,typeof progress === 'string' ? progress : JSON.stringify(progress));
-  let now = 100000;
+  let now = startAt, fakeTest;
   class ClockDate extends Date { constructor(...args) { super(...(args.length ? args : [now])); } static now() { return now; } }
   const messages = [];
   const window = {TMUA_CONTENT_READY:contentReady,TMUA_DATA:data,chrome:{webview:{postMessage:(message) => messages.push(message)}},innerWidth:1200,confirm:() => true,addEventListener:(type,fn) => { (handlers[type] ||= []).push(fn); }};
   if (browser) window.TMUA_BROWSER = browser;
+  if (testMode) window.TMUA_TestMode = {create(settings) {
+    let active = false;
+    fakeTest = {isActive:() => active,refresh(){},open(){},reset(){active = false; settings.onActiveChange(false);},start(){active = true; settings.onActiveChange(true);},finish(){active = false; settings.onActiveChange(false);}};
+    return fakeTest;
+  }};
   const location = {hash,protocol:'https:',reloads:0,reload(){this.reloads++;}};
   const fails = (setting) => typeof setting === 'function' ? setting() : setting;
   let enumeratedKeys = [];
@@ -92,9 +98,10 @@ function createApp({progress,storage = {},hash = '',historyThrows = false,storag
   window.localStorage = localStorage;
   const math = Object.create(Math); math.random = random;
   const context = vm.createContext({window,document,location,localStorage,history:{replaceState(_a,_b,fragment) { if (historyThrows) throw new Error('History unavailable'); location.hash = fragment; }},CSS:{escape:String},Date:ClockDate,Math:math,setTimeout:() => 1,clearTimeout(){},setInterval(fn){intervals.push(fn);},console});
-  const script = production.replace(/\n  initialize\(\);\n\}\)\(\);\s*$/, '\n  globalThis.testApp = {state,selectQuestion,filteredQuestions,applyFilters,clearFilters,elapsedSeconds,switchView,getMemory:() => memory};\n  initialize();\n})();');
+  const script = production.replace(/\n  initialize\(\);\n\}\)\(\);\s*$/, '\n  globalThis.testApp = {state,selectQuestion,filteredQuestions,applyFilters,clearFilters,elapsedSeconds,switchView,getMemory:() => memory,getRandom:() => randomController};\n  initialize();\n})();');
   assert.ok(script !== production,'Harness must expose the current shipped app entry point');
   vm.runInContext(memoryScript,context,{filename:'web/memory.js'});
+  vm.runInContext(randomScript,context,{filename:'web/random-mode.js'});
   vm.runInContext(script,context,{filename:'frontend/app.js'});
   if (!allowError) assert.equal(document.getElementById('error').hidden,true,document.getElementById('error-detail').textContent);
   const get = (id) => document.getElementById(id);
@@ -107,10 +114,149 @@ function createApp({progress,storage = {},hash = '',historyThrows = false,storag
     return result;
   }
   const memory = context.testApp.getMemory();
-  return {app:context.testApp,document,window,location,entries,get,messages,memory,advance:(ms) => { now += ms; for (const fn of intervals) fn(); },filter:(name,value) => { get(`${name}-filter`).value = value; get(`${name}-filter`).fire('change',{target:get(`${name}-filter`)}); },paper(value) { const button = get('paper-filter').querySelector(`[data-paper="${value}"]`) || document.querySelector(`[data-paper="${value}"]`); get('paper-filter').fire('click',{target:button}); },search(value) { get('search').value = value; get('search').fire('input',{target:get('search')}); },click(id) { const button = get(id); assert.ok(button,`Missing control ${id}`); assert.equal(button.disabled,false,`${id} must be enabled`); button.focus(); if (get('question-workspace').contains(button)) get('question-workspace').fire('click',{target:button}); else button.fire('click'); },choose(letter) { const button = get('question-workspace').querySelector(`[data-option="${letter}"]`); assert.ok(button); button.focus(); get('question-workspace').fire('click',{target:button}); },hash(fragment) { location.hash = fragment; for (const fn of handlers.hashchange || []) fn(); },fireWindow(type,event = {}) { for (const fn of handlers[type] || []) fn(event); },saved};
+  return {app:context.testApp,document,window,location,entries,get,messages,memory,random:context.testApp.getRandom(),testMode:fakeTest,now:() => now,advance:(ms) => { now += ms; for (const fn of intervals) fn(); },filter:(name,value) => { get(`${name}-filter`).value = value; get(`${name}-filter`).fire('change',{target:get(`${name}-filter`)}); },paper(value) { const button = get('paper-filter').querySelector(`[data-paper="${value}"]`) || document.querySelector(`[data-paper="${value}"]`); get('paper-filter').fire('click',{target:button}); },search(value) { get('search').value = value; get('search').fire('input',{target:get('search')}); },click(id) { const button = get(id); assert.ok(button,`Missing control ${id}`); assert.equal(button.disabled,false,`${id} must be enabled`); button.focus(); if (get('question-workspace').contains(button)) get('question-workspace').fire('click',{target:button}); else button.fire('click'); },choose(letter) { const button = get('question-workspace').querySelector(`[data-option="${letter}"]`); assert.ok(button); button.focus(); get('question-workspace').fire('click',{target:button}); },randomSettings(wrong,correct) { get('random-wrong-minutes').value = wrong; get('random-correct-minutes').value = correct; get('random-settings-form').fire('submit'); },hash(fragment) { location.hash = fragment; for (const fn of handlers.hashchange || []) fn(); },fireWindow(type,event = {}) { for (const fn of handlers[type] || []) fn(event); },saved};
 }
 const marked = (selected = 'A',bookmarked = false) => ({selected,marked:true,correct:true,bookmarked});
 const history = (h,id) => JSON.parse(JSON.stringify(id ? h.memory.list(id) : h.memory.all()));
+const smallFixture = (count) => { const data = fixture(); data.questions = data.questions.slice(0,count); return data; };
+const schedule = (h,id) => { const value = h.random.get(id); return value && JSON.parse(JSON.stringify(value)); };
+
+test('random mode includes the current question when it is the only fresh candidate',() => {
+  const h = createApp({data:smallFixture(1),random:() => 0}); h.advance(4500); h.choose('B'); h.click('random-tab');
+  assert.equal(h.app.state.view,'random'); assert.equal(h.app.state.currentId,'q1'); assert.equal(h.get('random-wait').hidden,true);
+  assert.equal(h.saved().q1.selected,''); assert.equal(h.app.elapsedSeconds(),0); assert.equal(history(h).length,0);
+  h.choose('B'); h.click('mark-answer'); h.click('random-next'); assert.equal(h.app.state.currentId,null);
+  h.advance(8*60000); assert.equal(h.app.state.currentId,'q1'); assert.equal(h.saved().q1.marked,false);
+});
+
+test('random mode schedules wrong answers for 8 minutes, correct reviews for 20 and subsequent mistakes for 8',() => {
+  const h = createApp({data:smallFixture(2),random:() => 0}); h.click('random-tab');
+  assert.equal(h.app.state.view,'random'); assert.equal(h.app.state.currentId,'q2');
+  assert.equal(h.get('random-wrong-minutes').value,8); assert.equal(h.get('random-correct-minutes').value,20);
+  h.advance(3000); h.choose('B'); h.click('mark-answer');
+  const wrongAt = h.now(), wrong = schedule(h,'q2');
+  assert.equal(wrong.dueAt,wrongAt+8*60000); assert.equal(wrong.hadWrong,true); assert.equal(wrong.status,'review');
+  assert.equal(h.get('retry-question'),null,'random review uses the scheduled queue rather than an immediate retry');
+  h.click('random-next'); assert.equal(h.app.state.currentId,'q1'); h.advance(1000); h.choose('A'); h.click('mark-answer');
+  h.click('random-next'); assert.equal(h.app.state.currentId,null); assert.equal(h.get('random-wait').hidden,false);
+  h.advance(wrong.dueAt-h.now()-1); assert.equal(h.app.state.currentId,null,'a scheduled question cannot return early');
+  h.advance(1); assert.equal(h.app.state.currentId,'q2','a waiting session automatically opens a review at its deadline');
+  assert.equal(h.app.elapsedSeconds(),0); assert.equal(h.saved().q2.selected,''); assert.equal(h.saved().q2.marked,false);
+  assert.equal(history(h,'q2').length,1);
+  h.advance(4000); h.choose('A'); h.click('mark-answer');
+  const rightAt = h.now(); assert.equal(schedule(h,'q2').dueAt,rightAt+20*60000); assert.equal(schedule(h,'q2').hadWrong,true);
+  h.click('random-next'); assert.equal(h.app.state.currentId,null);
+  h.advance(20*60000-1); assert.equal(h.app.state.currentId,null); h.advance(1); assert.equal(h.app.state.currentId,'q2');
+  h.advance(2000); h.choose('C'); h.click('mark-answer'); assert.equal(schedule(h,'q2').dueAt,h.now()+8*60000);
+  assert.deepEqual(history(h,'q2').map((row) => [row.outcome,row.elapsedSeconds]),[['wrong',3],['correct',4],['wrong',2]]);
+});
+
+test('random first-try correctness retires a question and fresh sessions clear old answers, solutions and timer while preserving history',() => {
+  const h = createApp({data:smallFixture(2),random:() => 0,progress:{q2:{...marked('B',true),elapsedSeconds:45,updatedAt:'1970-01-01T00:00:01.000Z'}}});
+  h.app.selectQuestion('q2'); h.click('reveal-solution'); assert.match(h.get('question-workspace').innerHTML,/solution-panel/);
+  h.app.selectQuestion('q1'); h.click('random-tab');
+  assert.equal(h.app.state.currentId,'q2'); assert.equal(h.saved().q2.selected,''); assert.equal(h.saved().q2.marked,false);
+  assert.equal(h.saved().q2.bookmarked,true); assert.equal(h.app.elapsedSeconds(),0); assert.equal(h.app.state.reveal,false);
+  assert.doesNotMatch(h.get('question-workspace').innerHTML,/solution-panel/); assert.equal(history(h,'q2').length,1);
+  const firstId = h.saved().q2.attemptId; h.advance(2000); h.choose('A'); h.click('mark-answer');
+  assert.equal(schedule(h,'q2').status,'completed'); assert.equal(schedule(h,'q2').hadWrong,false); assert.equal(schedule(h,'q2').dueAt,null);
+  assert.equal(history(h,'q2').length,2); assert.equal(history(h,'q2')[1].id,firstId);
+  h.click('random-next'); assert.equal(h.app.state.currentId,'q1'); h.choose('A'); h.click('mark-answer'); h.click('random-next');
+  assert.equal(h.app.state.currentId,null); h.advance(24*60*60000); assert.equal(h.app.state.currentId,null);
+  assert.match(h.get('random-wait-message').textContent,/Every question has been answered correctly/);
+  assert.equal(h.random.summary(['q1','q2']).completed,2);
+});
+
+test('random due reviews never interrupt unfinished work or checked feedback and take priority on Next',() => {
+  const h = createApp({data:smallFixture(3),random:() => 0}); h.click('random-tab');
+  assert.equal(h.app.state.currentId,'q2'); h.choose('B'); h.click('mark-answer'); const dueAt = schedule(h,'q2').dueAt;
+  h.click('random-next'); assert.equal(h.app.state.currentId,'q1'); h.choose('C'); const draftId = h.saved().q1.attemptId;
+  h.advance(dueAt-h.now()); assert.equal(h.app.state.currentId,'q1'); assert.equal(h.saved().q1.selected,'C'); assert.equal(h.saved().q1.marked,false);
+  assert.equal(h.saved().q1.attemptId,draftId); assert.match(h.get('random-due').textContent,/1 review ready/);
+  h.choose('A'); h.click('mark-answer'); h.click('reveal-solution');
+  h.advance(60000); assert.equal(h.app.state.currentId,'q1'); assert.equal(h.saved().q1.marked,true); assert.equal(h.app.state.reveal,true);
+  assert.match(h.get('question-workspace').innerHTML,/Correct\./);
+  h.click('random-next'); assert.equal(h.app.state.currentId,'q2','the due review precedes untouched q3');
+  assert.equal(h.saved().q2.selected,''); assert.equal(h.saved().q2.marked,false); assert.equal(h.app.elapsedSeconds(),0); assert.equal(h.app.state.reveal,false);
+  assert.notEqual(h.saved().q2.attemptId,history(h,'q2')[0].id); assert.equal(history(h,'q2').length,1);
+});
+
+test('random settings reschedule waiting reviews from completion time, validate whole minutes and survive reload',() => {
+  const h = createApp({data:smallFixture(2),random:() => 0}); h.click('random-tab'); h.choose('B'); h.click('mark-answer');
+  const completedAt = h.now(); h.advance(30000); h.randomSettings(2,7);
+  assert.match(h.get('random-settings-status').textContent,/Saved/); assert.equal(schedule(h,'q2').dueAt,completedAt+2*60000);
+  h.randomSettings(0,7); assert.match(h.get('random-settings-status').textContent,/whole minutes/);
+  h.randomSettings(2.5,7); assert.equal(h.random.settings().wrongMinutes,2); assert.equal(h.random.settings().correctMinutes,7);
+  const reopened = createApp({data:smallFixture(2),storage:h.entries,startAt:h.now(),random:() => 0});
+  assert.equal(reopened.app.state.view,'random'); assert.equal(reopened.app.state.currentId,'q2');
+  assert.equal(reopened.get('random-wrong-minutes').value,2); assert.equal(reopened.get('random-correct-minutes').value,7);
+  assert.equal(reopened.saved().q2.marked,true); assert.equal(history(reopened,'q2').length,1); assert.equal(schedule(reopened,'q2').dueAt,completedAt+2*60000);
+});
+
+test('random active drafts reload with the same answer, attempt ID and fractional accumulated time',() => {
+  const h = createApp({data:smallFixture(3),random:() => 0}); h.click('random-tab'); h.advance(5750); h.choose('C'); h.fireWindow('pagehide');
+  const id = h.saved().q2.attemptId; assert.equal(history(h).length,0);
+  const reopened = createApp({data:smallFixture(3),storage:h.entries,startAt:h.now()+60000,random:() => 0});
+  assert.equal(reopened.app.state.view,'random'); assert.equal(reopened.app.state.currentId,'q2');
+  assert.equal(reopened.saved().q2.selected,'C'); assert.equal(reopened.saved().q2.attemptId,id); assert.equal(reopened.app.state.elapsedMs,5750);
+  reopened.advance(250); reopened.click('mark-answer'); assert.equal(history(reopened,'q2').length,1);
+  assert.equal(history(reopened,'q2')[0].id,id); assert.equal(history(reopened,'q2')[0].elapsedSeconds,6);
+  assert.equal(schedule(reopened,'q2').dueAt,reopened.now()+8*60000);
+});
+
+test('random waiting auto-review respects hidden pages and stopping exits without losing schedules or history',() => {
+  const h = createApp({data:smallFixture(2),random:() => 0}); h.click('random-tab'); h.choose('B'); h.click('mark-answer'); const dueAt = schedule(h,'q2').dueAt;
+  h.click('random-next'); h.choose('A'); h.click('mark-answer'); h.click('random-next'); assert.equal(h.app.state.currentId,null);
+  h.document.hidden = true; h.document.fire('visibilitychange'); h.advance(dueAt-h.now()); assert.equal(h.app.state.currentId,null);
+  h.document.hidden = false; h.document.fire('visibilitychange'); h.advance(1000); assert.equal(h.app.state.currentId,'q2');
+  h.advance(2250); h.choose('C'); h.click('random-stop');
+  assert.equal(h.app.state.view,'practice'); assert.equal(h.get('random-mode-panel').hidden,true); assert.equal(h.get('practice-view').classList.contains('random-layout'),false);
+  assert.equal(JSON.parse(h.entries.get('tmua-random-session-v1:legacy')).active,false);
+  assert.equal(history(h,'q2').length,1); assert.equal(schedule(h,'q2').dueAt,dueAt);
+  const reopened = createApp({data:smallFixture(2),storage:h.entries,startAt:h.now()}); assert.equal(reopened.app.state.view,'practice');
+  assert.equal(reopened.saved().q2.selected,'C'); assert.equal(reopened.app.state.elapsedMs,2250); assert.equal(history(reopened,'q2').length,1);
+});
+
+test('an active paper test locks random entry and stops the prior random session',() => {
+  const h = createApp({data:smallFixture(3),random:() => 0,testMode:true}); h.click('random-tab'); h.choose('B'); h.click('mark-answer');
+  const before = schedule(h,'q2'); h.click('test-tab'); h.testMode.start();
+  assert.equal(h.app.state.view,'test'); assert.equal(h.get('random-tab').disabled,true); assert.equal(h.get('practice-tab').disabled,true);
+  assert.equal(h.get('question-workspace').innerHTML,''); assert.equal(JSON.parse(h.entries.get('tmua-random-session-v1:legacy')).active,false);
+  h.app.switchView('random'); assert.equal(h.app.state.view,'test'); assert.match(h.get('toast').textContent,/Submit your test/);
+  h.advance(8*60000); assert.deepEqual(schedule(h,'q2'),before); assert.equal(history(h,'q2').length,1);
+  h.testMode.finish(); assert.equal(h.get('random-tab').disabled,false); h.click('random-tab'); assert.equal(h.app.state.view,'random'); assert.equal(h.app.state.currentId,'q2');
+});
+
+test('random schedules and settings synchronize across tabs and reset cannot resurrect old reviews',() => {
+  const shared = new Map(), a = createApp({data:smallFixture(3),storage:shared,random:() => 0});
+  a.click('random-tab'); a.choose('B'); a.click('mark-answer');
+  const b = createApp({data:smallFixture(3),storage:shared,startAt:a.now(),random:() => 0});
+  assert.equal(b.app.state.view,'random'); assert.equal(b.app.state.currentId,'q2'); assert.equal(schedule(b,'q2').hadWrong,true);
+  b.randomSettings(1,5); a.fireWindow('storage',{key:'tmua-random-settings-v1'});
+  assert.equal(a.random.settings().wrongMinutes,1); assert.equal(schedule(a,'q2').dueAt,a.now()+60000);
+  b.click('random-next'); assert.equal(b.app.state.currentId,'q1'); b.choose('A'); b.click('mark-answer');
+  const eventKey = [...shared.keys()].find((key) => key.startsWith('tmua-random-attempt-v1:legacy:q1:'));
+  assert.ok(eventKey); a.fireWindow('storage',{key:eventKey}); assert.equal(schedule(a,'q1').status,'completed');
+  assert.equal(a.random.summary(['q1','q2','q3']).completed,1); assert.equal(a.app.state.currentId,'q2','a storage event preserves the current feedback');
+  b.click('random-stop'); b.click('reset-progress'); a.fireWindow('storage',{key:RESET});
+  assert.equal(history(a).length,0); assert.equal(schedule(a,'q1'),undefined); assert.equal(schedule(a,'q2'),undefined);
+  assert.equal(a.random.summary(['q1','q2','q3']).fresh,3); assert.equal(a.app.elapsedSeconds(),0); assert.equal(a.saved().q2,undefined);
+  a.click('random-next'); assert.equal(a.app.state.currentId,'q1'); a.choose('B'); a.click('mark-answer');
+  assert.equal(history(a).length,1); assert.equal(history(a,'q2').length,0); assert.equal(schedule(a,'q1').dueAt,a.now()+60000);
+  const reopened = createApp({data:smallFixture(3),storage:shared,startAt:a.now(),random:() => 0});
+  assert.equal(history(reopened).length,1); assert.equal(schedule(reopened,'q2'),undefined); assert.equal(reopened.random.settings().correctMinutes,5);
+});
+
+test('random outcomes recover after denied storage without duplicate history or schedule events',() => {
+  let unavailable = true; const h = createApp({data:smallFixture(2),random:() => 0,storageThrows:() => unavailable});
+  h.click('random-tab'); h.advance(3000); h.choose('B'); h.click('mark-answer');
+  assert.equal(history(h,'q2').length,1); assert.equal(schedule(h,'q2').dueAt,h.now()+8*60000);
+  unavailable = false; h.fireWindow('focus'); h.fireWindow('focus');
+  const reopened = createApp({data:smallFixture(2),storage:h.entries,startAt:h.now(),random:() => 0});
+  assert.equal(reopened.app.state.view,'random'); assert.equal(reopened.saved().q2.marked,true); assert.equal(history(reopened,'q2').length,1);
+  assert.equal([...h.entries.keys()].filter((key) => key.startsWith('tmua-random-attempt-v1:')).length,1);
+  assert.equal(schedule(reopened,'q2').dueAt,h.now()+8*60000);
+});
 
 test('practice history records every completed wrong and correct try with separate durations',() => {
   const h = createApp();
@@ -264,7 +410,8 @@ test('retrying and unbookmarking under active progress filters preserve ordered 
   assert.equal(h.app.state.currentId,'q4'); h.click('next-question'); assert.equal(h.app.state.currentId,'q6'); h.click('previous-question'); assert.equal(h.app.state.currentId,'q2');
   const b = createApp({progress:{q2:{bookmarked:true},q4:{bookmarked:true},q6:{bookmarked:true}}}); b.filter('status','bookmarked'); b.app.selectQuestion('q4'); b.click('bookmark-question');
   b.click('previous-question'); assert.equal(b.app.state.currentId,'q2'); b.app.selectQuestion('q4'); b.click('next-question'); assert.equal(b.app.state.currentId,'q6');
-  const one = createApp({progress:{q4:{bookmarked:true},q6:{bookmarked:true}}}); one.filter('status','bookmarked'); one.app.selectQuestion('q4'); one.click('bookmark-question'); one.click('random-question'); assert.equal(one.app.state.currentId,'q6');
+  const one = createApp({progress:{q4:{bookmarked:true},q6:{bookmarked:true}},random:() => 0}); one.filter('status','bookmarked'); one.app.selectQuestion('q4'); one.click('bookmark-question'); one.click('random-question');
+  assert.equal(one.app.state.view,'random'); assert.equal(one.app.state.currentId,'q1','random mode draws from the complete archive, independent of the bookmarked filter');
 });
 test('malformed saved records cannot create false attempts, invalid answers or wrong correctness',() => {
   const h = createApp({progress:{q1:'broken',q2:{selected:'A',marked:'false',correct:true,bookmarked:'true'},q3:{selected:'Z',marked:true},q4:{selected:' a ',marked:true,correct:false,elapsedSeconds:-3},q5:marked('B'),q6:[marked()],unknown:marked()}});

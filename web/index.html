@@ -13,7 +13,7 @@
   <a class="skip-link" href="#main">Skip to questions</a>
   <header class="site-header">
     <a class="brand" href="#" aria-label="TMUA question bank home"><span class="brand-mark" aria-hidden="true">∴</span><span>TMUA<span class="brand-sub">question bank</span></span></a>
-    <nav class="nav" aria-label="Main navigation"><button class="nav-link active" id="practice-tab" type="button">Practice</button><button class="nav-link" id="test-tab" type="button">Test mode</button><button class="nav-link" id="sources-tab" type="button">Papers & sources</button></nav>
+    <nav class="nav" aria-label="Main navigation"><button class="nav-link active" id="practice-tab" type="button">Practice</button><button class="nav-link" id="random-tab" type="button">Random mode</button><button class="nav-link" id="test-tab" type="button">Test mode</button><button class="nav-link" id="sources-tab" type="button">Papers & sources</button></nav>
   </header>
   <div id="loading" class="loading-state" role="status"><p>Loading questions…</p></div>
   <main id="setup" class="loading-state" hidden>
@@ -44,7 +44,18 @@
       </aside>
       <main id="main" class="main-content" tabindex="-1">
         <h1 class="sr-only">Questions</h1>
+        <section id="random-mode-panel" class="random-mode-panel" hidden aria-label="Random mode">
+          <div class="random-heading"><h2>Random mode</h2><button id="random-stop" class="text-button" type="button">Back to practice</button></div>
+          <p id="random-status" role="status"></p>
+          <div class="random-actions"><button id="random-next" class="button primary" type="button">Next question</button><span id="random-due"></span></div>
+          <details class="random-settings"><summary>Settings</summary><form id="random-settings-form">
+            <label for="random-wrong-minutes">After a wrong answer (minutes)<input id="random-wrong-minutes" type="number" min="1" max="1440" step="1" required value="8"></label>
+            <label for="random-correct-minutes">After a correct review (minutes)<input id="random-correct-minutes" type="number" min="1" max="1440" step="1" required value="20"></label>
+            <button id="random-settings-save" class="button" type="submit">Save settings</button><p id="random-settings-status" role="status"></p>
+          </form><p>Due reviews come first when you move to the next question. A wrong answer restarts the shorter interval; a correct review uses the longer one. A question answered correctly on its first try leaves the queue.</p></details>
+        </section>
         <div class="bank-summary"><span><strong id="total-count">—</strong> questions</span><span><strong id="paper-count">—</strong> papers</span><span><strong id="attempted-count">0</strong> attempted</span><button class="text-button source-shortcut" id="source-shortcut" type="button">About the archive ↗</button></div>
+        <div id="random-wait" class="random-wait" hidden><h2>All caught up</h2><p id="random-wait-message"></p></div>
         <section id="question-workspace" aria-label="Current question" tabindex="-1"></section>
         <div id="empty-state" class="empty-state" hidden><span aria-hidden="true">⌕</span><h2>No matching questions</h2><p>Try another topic, a different year or a shorter search.</p><button id="empty-clear" class="button" type="button">Clear filters</button></div>
       </main>
@@ -73,6 +84,7 @@
   <script src="data/questions.js" defer></script>
   <script src="browser-bootstrap.js" defer></script>
   <script src="memory.js" defer></script>
+  <script src="random-mode.js" defer></script>
   <script src="test-mode.js" defer></script>
   <script src="app.js" defer></script>
   <script src="pdf-renderer.mjs" type="module"></script>

@@ -7,7 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>TMUA-Study-Tool</AssemblyName>
     <RootNamespace>TmuaDesktop</RootNamespace>
-    <Version>1.2.0</Version>
+    <Version>1.3.0</Version>
     <Product>TMUA Study Tool</Product>
     <Description>Free TMUA practice. Download official papers locally for personal study.</Description>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>

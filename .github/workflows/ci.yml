@@ -18,7 +18,7 @@ jobs:
         with:
           node-version: '22'
       - name: Frontend and metadata tests
-        run: node --test tests/frontend-regression.test.cjs tests/browser-store.test.mjs tests/public-metadata.test.mjs tests/memory.test.cjs tests/test-mode.test.cjs
+        run: node --test tests/frontend-regression.test.cjs tests/browser-store.test.mjs tests/public-metadata.test.mjs tests/memory.test.cjs tests/test-mode.test.cjs tests/random-mode.test.cjs
       - name: Download and integrity tests
         run: dotnet run --project tests/native/NativeTests.csproj -- .build/native-tests
       - name: Build public Windows app

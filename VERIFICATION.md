@@ -1,5 +1,17 @@
 # Verification
 
+## Version 1.3.0 — 1 November 2026
+
+Random mode replaces the previous Surprise me action with a persistent spaced-repetition queue.
+
+- 88 JavaScript test groups passed: 37 frontend, 17 random-scheduler, 11 attempt-history, 15 timed-test, five PDF-import and three metadata/geometry groups. The frontend checks include all 2,285 answer choices, all 1,950 filters and the existing 600-action sequence.
+- Scheduler checks verify exact 8- and 20-minute boundaries, another wrong answer restarting the shorter delay, first-try correct questions leaving the queue, due-review priority and no early repeats. Settings changes recalculate pending deadlines from the last checked time.
+- Root integration checks cover clean review attempts with preserved history, saved active drafts, reloads, cross-tab settings and outcomes, reset generations, denied-storage recovery, no interruption of work or checked feedback, waiting for due reviews and the single-question case.
+- 33 production-browser checks passed with isolated local data, including 8 → 20 → 8 scheduling, custom intervals and reload, marked-history retention, automatic review while waiting, paper-test locks, actual imported-PDF rendering and a 390-pixel mobile layout without horizontal overflow.
+- Six publication guards passed. Public bundles still exclude exam PDFs, extracted exam text, rendered exam images and personal profiles.
+
+Review schedules use local wall-clock time and remain on the current browser or app profile. Due reviews appear on the next-question action, or automatically when the waiting page is open; an active question is never replaced by the review timer. These checks establish covered behaviour rather than an absolute guarantee of error-free software.
+
 ## Version 1.2.0 — 1 November 2026
 
 Attempt history and timed paper tests were checked with isolated profiles; existing user progress was not used for testing.

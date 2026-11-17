@@ -599,3 +599,21 @@ test('browser with an imported PDF uses individual crop descriptors while keepin
   assert.equal(h.get('total-count').textContent,360); assert.equal(h.get('question-workspace').querySelectorAll('iframe').length,0);
   assert.match(h.get('question-workspace').innerHTML,/data-pdf-region=/); assert.ok(rewrites >= 2);
 });
+
+test('iPad and non-embedding browsers offer the exact source page and import instead of a broken native viewer',() => {
+  const browser = {status:{completed:0,total:45},error:'',requiresPdfImport:true,repository:{sources:[]},hasPdf:() => false,sourceUrl:(url) => 'https://publisher.invalid/'+url.split('/').pop(),rewriteLinks(){}};
+  const h = createApp({data:realData(),browser});
+  const q = h.app.state.data.questions.find(item => item.id === h.app.state.currentId);
+  assert.equal(h.get('question-workspace').querySelectorAll('iframe').length,0);
+  assert.match(h.get('question-workspace').innerHTML,/Import saved PDF/);
+  assert.ok(h.get('question-workspace').innerHTML.includes(`#page=${q.images[0].page}&amp;view=FitH`));
+  h.click('reveal-solution');
+  assert.equal(h.get('question-workspace').querySelectorAll('iframe').length,0);
+  assert.ok(h.get('question-workspace').innerHTML.includes('Official worked solution'));
+  h.window.tmuaDownloadProgress({state:'importing',message:'Checking the selected PDF…'});
+  assert.equal(h.get('question-workspace').querySelector('.pdf-import-status').textContent,'Checking the selected PDF…');
+  assert.equal(h.get('question-workspace').querySelector('.import-region-pdf').disabled,true);
+  h.window.tmuaDownloadProgress({state:'error',message:'This file does not match the original official PDF.'});
+  assert.match(h.get('question-workspace').querySelector('.pdf-import-status').textContent,/does not match/);
+  assert.equal(h.get('question-workspace').querySelector('.import-region-pdf').disabled,false);
+});

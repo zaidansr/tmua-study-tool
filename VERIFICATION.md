@@ -1,5 +1,15 @@
 # Verification
 
+## Phone and tablet update — 17 November 2026
+
+- 90 JavaScript test groups passed, including the iPad import fallback and a rendering-budget check for every question and solution region.
+- Six publication guards passed. Both builds use the pinned PDF.js 5.4.624 compatibility build, including its matching worker.
+- 44 browser assertions passed across 16 viewport/flow captures: desktop 1440px, tablet 820px portrait and 1180px landscape, phones 320px and 390px, and phone landscape 844px. Coverage includes imported PDF questions and solutions, enlargement, filters, random settings, test setup/running/results/review and sources. Visible buttons and form controls fit the viewport and meet the 44px target. The production compatibility bundle also rendered with `Promise.withResolvers` and `Promise.try` removed before loading. See [the responsive test report](tests/reports/responsive-2026-11-17.json).
+- PDF region rendering is serialized, backing canvases are bounded and released after encoding, and question enlargement starts fitted to the available screen width.
+- iOS/iPadOS (including desktop-site mode) and browsers without native PDF embedding offer the original source page and local import instead of a native PDF iframe. Locally imported original PDFs continue to use the reviewed crop coordinates and SHA-256 verification.
+
+Physical iPad/iPhone Safari testing has not been performed in this Windows environment. Responsive browser checks simulate viewport sizes and selected platform/API constraints; they do not establish that every Safari version works.
+
 ## Version 1.3.0 — 1 November 2026
 
 Random mode replaces the previous Surprise me action with a persistent spaced-repetition queue.

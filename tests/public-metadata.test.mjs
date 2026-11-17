@@ -3,13 +3,28 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {test} from 'node:test';
-import {regionGeometry} from '../web/pdf-geometry.mjs';
+import {regionGeometry,regionScale} from '../web/pdf-geometry.mjs';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const web = path.join(root,'web');
 const data = JSON.parse(fs.readFileSync(path.join(web,'data/questions.json'),'utf8'));
 const manifest = JSON.parse(fs.readFileSync(path.join(web,'data/sources.json'),'utf8'));
 const pdfUrl = (item) => 'https://papers.tmua.local/'+path.posix.basename(item.path);
+
+test('all question and solution canvases fit the mobile rendering budget without changing their crops',() => {
+  const regions = data.questions.flatMap(q => [...q.images,...q.solutionImages]);
+  for (const region of regions) {
+    const scale = regionScale(region), geometry = regionGeometry(region,scale);
+    assert.ok(scale > 0 && scale <= 2.3);
+    assert.ok(geometry.width <= 4001 && geometry.height <= 4001);
+    assert.ok(geometry.width*geometry.height < 3_510_000);
+    assert.equal(geometry.transform[4],-region.rect[0]*scale);
+    assert.equal(geometry.transform[5],-region.rect[1]*scale);
+  }
+  const oversized = {page:1,pageWidth:4000,pageHeight:6000,rect:[0,0,4000,6000]};
+  assert.ok(regionScale(oversized) < 1);
+  assert.throws(() => regionScale({...oversized,rect:[0,0,-1,2]}));
+});
 
 test('metadata has all 360 question slots and references only hashed original official PDFs',() => {
   assert.equal(data.questions.length,360); assert.equal(data.papers.length,18); assert.equal(manifest.sources.length,45);

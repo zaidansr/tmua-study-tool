@@ -1,4 +1,11 @@
 // Coordinates are upper-left PDF points, matching the reviewed source regions.
+export function regionScale(region) {
+  regionGeometry(region,1);
+  const width = region.rect[2]-region.rect[0], height = region.rect[3]-region.rect[1];
+  // Bound each backing canvas for mobile Safari; CSS controls the display size.
+  return Math.min(2.3,4000/width,4000/height,Math.sqrt(3_500_000/(width*height)));
+}
+
 export function regionGeometry(region, scale = 2.3) {
   if (!region || !Array.isArray(region.rect) || region.rect.length !== 4 || !region.rect.every(Number.isFinite)) throw new Error('Invalid PDF region.');
   if (!Number.isFinite(region.pageWidth) || !Number.isFinite(region.pageHeight) || region.pageWidth <= 0 || region.pageHeight <= 0) throw new Error('Invalid PDF page dimensions.');

@@ -195,6 +195,9 @@
       const title = `${description}${paths.length > 1 ? `, part ${index + 1} of ${paths.length}` : ''}`;
       if (window.TMUA_BROWSER && !window.TMUA_BROWSER.hasPdf(region.pdf)) {
         const original = pdfLink(window.TMUA_BROWSER.sourceUrl(region.pdf),region.page)+'&view=FitH';
+        if (window.TMUA_BROWSER.requiresPdfImport) {
+          return `<section class="remote-pdf pdf-import-prompt" aria-label="${escape(title)}"><h3>Import to view</h3><p>Save the official PDF, then import it to display this page. Your copy stays on this device.</p><p>PDF page ${escape(region.page)}</p><div class="pdf-import-actions"><a class="button" href="${escape(original)}" target="_blank" rel="noopener noreferrer">Open official PDF ↗</a><button class="button primary import-region-pdf" type="button">Import saved PDF</button></div><p class="pdf-import-status" role="status"></p></section>`;
+        }
         return `<section class="remote-pdf"><p>Original PDF page ${escape(region.page)}. <a href="${escape(original)}" target="_blank" rel="noopener noreferrer">Open original PDF ↗</a>${testMode ? '' : ' · <button class="text-button import-region-pdf" type="button">Import for the individual question</button>'}</p><iframe class="publisher-pdf" src="${escape(original)}" title="${escape(title)}" loading="lazy"></iframe></section>`;
       }
       return `<a class="image-zoom pdf-region" href="${escape(pdfLink(region.pdf,region.page))}" target="_blank" rel="noopener noreferrer" title="Open full-size image" data-pdf-region="${escape(JSON.stringify(region))}"><span class="pdf-loading" role="status">Rendering original PDF…</span><img hidden alt="${escape(title)}. Open full-size image." decoding="async"></a>`;
@@ -522,23 +525,29 @@
       if (window.TMUA_BROWSER) {
         const browser = window.TMUA_BROWSER, manager = $('paper-manager'), input = $('import-papers-files'), importButton = $('import-papers'), status = $('browser-import-status');
         $('browser-paper-bar').hidden = false;
-        $('browser-paper-summary').textContent = browser.status.completed ? `${browser.status.completed} of ${browser.status.total} PDFs stored on this device.` : 'Viewing original publisher PDFs online.';
+        $('browser-paper-summary').textContent = browser.status.completed ? `${browser.status.completed} of ${browser.status.total} PDFs stored on this device.` : browser.requiresPdfImport ? 'Import a PDF to display individual questions.' : 'Viewing original publisher PDFs online.';
         status.textContent = browser.error || `${browser.status.completed} of ${browser.status.total} official PDFs stored.`;
         $('browser-download-list').innerHTML = browser.repository.sources.map((source) => `<a href="${escape(source.url)}" target="_blank" rel="noopener noreferrer">${escape(source.label)} ↗</a>`).join('');
         const showManager = () => manager.showModal();
         $('manage-papers').addEventListener('click',() => { if (!testController?.isActive()) showManager(); });
         $('close-paper-manager').addEventListener('click',() => manager.close());
         importButton.addEventListener('click',() => input.click());
-        document.addEventListener('click',(event) => { if (!testController?.isActive() && event.target.closest('.import-region-pdf')) showManager(); });
+        document.addEventListener('click',(event) => {
+          if (!event.target.closest('.import-region-pdf')) return;
+          if (browser.requiresPdfImport) input.click();
+          else if (!testController?.isActive()) showManager();
+        });
         window.tmuaDownloadProgress = (update) => {
           status.textContent = update.message || '';
           importButton.disabled = update.state === 'importing';
+          document.querySelectorAll('.pdf-import-status').forEach((note) => { note.textContent = update.message || ''; });
+          document.querySelectorAll('.import-region-pdf').forEach((button) => { button.disabled = update.state === 'importing'; });
           $('browser-paper-summary').textContent = `${update.completed || 0} of ${update.total || 45} PDFs stored on this device.`;
           if (update.state === 'complete') location.reload();
         };
         input.addEventListener('change',async () => {
           try { if (input.files?.length) await browser.importFiles([...input.files]); }
-          catch (error) { status.textContent = error.message; importButton.disabled = false; }
+          catch (error) { window.tmuaDownloadProgress({...browser.status,state:'error',message:error.message}); }
           input.value = '';
         });
         browser.rewriteLinks($('sources-view'));

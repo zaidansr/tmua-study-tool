@@ -4,7 +4,9 @@ A free study tool for practising TMUA questions, with official worked solutions,
 
 ## Open in your browser
 
-Open [TMUA Study Tool](https://zaidansr.github.io/tmua-study-tool/). You can start practising immediately: the website displays the original publisher-hosted PDF at the relevant page, with answer checking, filters and progress. An **Open original PDF** link is also available if your browser cannot display the embedded document.
+Open [TMUA Study Tool](https://zaidansr.github.io/tmua-study-tool/). The website has a black-and-white interface with phone and tablet layouts. On browsers with a supported embedded PDF viewer, it displays the original publisher-hosted PDF at the relevant page, with answer checking, filters and progress.
+
+On **iPad and iPhone**, open the official PDF, save it to Files, then tap **Import saved PDF** and select it. Import the worked-solutions PDF too when you want its individual solution crops. This avoids iOS's embedded PDF viewer, which can display the wrong page or fail to scroll. Imported originals render directly in the app. Tap a question to enlarge it, then choose **Actual size** or **Fit to screen**. Use an up-to-date Safari version; the PDF renderer bundles Mozilla's browser compatibility build.
 
 For individual question crops and local paper viewing, optionally import one or more original PDFs downloaded from the official archive. Imports are checked against the expected SHA-256 hashes and saved in your browser's local database. The website hosts the app and question index; exam files are served by the publisher or kept in your own browser.
 

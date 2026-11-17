@@ -1,10 +1,10 @@
 import * as pdfjs from './vendor/pdfjs/pdf.mjs';
-import {regionGeometry} from './pdf-geometry.mjs';
+import {regionGeometry,regionScale} from './pdf-geometry.mjs';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL('./vendor/pdfjs/pdf.worker.mjs',import.meta.url).href;
 const vendor = new URL('./vendor/pdfjs/',import.meta.url).href;
 const documents = new Map(), rendered = new Map(), retired = new Set();
-const SCALE = 2.3;
+let renderingQueue = Promise.resolve();
 
 function releaseStaleImages() {
   const visible = new Set([...document.querySelectorAll('img')].map((image) => image.src));
@@ -45,21 +45,24 @@ function trimWhite(canvas) {
 }
 
 async function renderRegion(region) {
-  const geometry = regionGeometry(region,SCALE), entry = documentFor(region.pdf);
+  const scale = regionScale(region), geometry = regionGeometry(region,scale), entry = documentFor(region.pdf);
+  let canvas, trimmed;
   entry.active++;
   try {
     const pdf = await entry.promise;
     if (region.page > pdf.numPages) throw new Error('The source PDF page is missing.');
     const page = await pdf.getPage(region.page);
     if (page.rotate !== 0) throw new Error('The source page rotation has changed.');
-    const viewport = page.getViewport({scale:SCALE});
-    if (Math.abs(viewport.width/SCALE-region.pageWidth) > 0.1 || Math.abs(viewport.height/SCALE-region.pageHeight) > 0.1) throw new Error('The source PDF page dimensions have changed.');
-    const canvas = document.createElement('canvas'); canvas.width = geometry.width; canvas.height = geometry.height;
+    const viewport = page.getViewport({scale});
+    if (Math.abs(viewport.width/scale-region.pageWidth) > 0.1 || Math.abs(viewport.height/scale-region.pageHeight) > 0.1) throw new Error('The source PDF page dimensions have changed.');
+    canvas = document.createElement('canvas'); canvas.width = geometry.width; canvas.height = geometry.height;
     await page.render({canvasContext:canvas.getContext('2d'),viewport,transform:geometry.transform,background:'rgb(255,255,255)'}).promise;
-    const trimmed = trimWhite(canvas);
+    trimmed = trimWhite(canvas);
     const blob = await new Promise((resolve,reject) => trimmed.toBlob((result) => result ? resolve(result) : reject(new Error('The PDF image could not be created.')),'image/png'));
     return URL.createObjectURL(blob);
   } finally {
+    // Safari can retain canvas backing stores until explicitly released.
+    for (const surface of [canvas,trimmed]) if (surface) { surface.width = 0; surface.height = 0; }
     entry.active--;
     // Keep a few parsed PDFs warm while bounding memory during long study sessions.
     for (const [url,older] of documents) {
@@ -74,7 +77,9 @@ function imageFor(region) {
   const key = JSON.stringify(region);
   let promise = rendered.get(key);
   if (!promise) {
-    promise = renderRegion(region); rendered.set(key,promise);
+    promise = renderingQueue.then(() => renderRegion(region));
+    renderingQueue = promise.catch(() => {});
+    rendered.set(key,promise);
     promise.catch(() => { if (rendered.get(key) === promise) rendered.delete(key); });
   }
   rendered.delete(key); rendered.set(key,promise);
@@ -114,7 +119,15 @@ document.addEventListener('click',(event) => {
   if (!image || image.hidden || !image.src) return;
   event.preventDefault();
   const zoom = document.getElementById('zoom-image'); zoom.src = image.src; zoom.alt = image.alt;
-  document.getElementById('image-dialog').showModal();
+  const dialog = document.getElementById('image-dialog'); dialog.classList.remove('actual-size');
+  const toggle = document.getElementById('toggle-image-size'); toggle.textContent = 'Actual size'; toggle.setAttribute('aria-pressed','false');
+  dialog.showModal();
+  const scroll = dialog.querySelector('.zoom-scroll'); scroll.scrollTop = 0; scroll.scrollLeft = 0;
+});
+document.getElementById('toggle-image-size').addEventListener('click',(event) => {
+  const enlarged = document.getElementById('image-dialog').classList.toggle('actual-size');
+  event.currentTarget.setAttribute('aria-pressed',String(enlarged));
+  event.currentTarget.textContent = enlarged ? 'Fit to screen' : 'Actual size';
 });
 window.TMUA_PDFRenderer = {mount};
 window.dispatchEvent(new Event('tmua-pdf-ready'));

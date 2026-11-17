@@ -26,7 +26,7 @@ $dependencyRoot = Join-Path $projectRoot 'web/vendor/pdfjs'
     if ($LASTEXITCODE -ne 0) { throw 'Unable to extract the PDF.js package with Windows tar.' }
     New-Item -ItemType Directory -Path $dependencyRoot -Force | Out-Null
     foreach ($name in @('pdf.mjs','pdf.worker.mjs')) {
-        Copy-Item -LiteralPath (Join-Path $unpackRoot "package/build/$name") -Destination (Join-Path $dependencyRoot $name) -Force
+        Copy-Item -LiteralPath (Join-Path $unpackRoot "package/legacy/build/$name") -Destination (Join-Path $dependencyRoot $name) -Force
     }
     foreach ($name in @('LICENSE','package.json','cmaps','standard_fonts','wasm')) {
         Copy-Item -LiteralPath (Join-Path $unpackRoot "package/$name") -Destination $dependencyRoot -Recurse -Force

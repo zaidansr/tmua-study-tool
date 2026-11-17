@@ -5,7 +5,10 @@
 if (!(typeof window.TMUA_CONTENT_READY === 'boolean' && location.origin === 'https://tmua.local')) {
   window.TMUA_CONTENT_READY = false;
   window.TMUA_BOOT = (async () => {
-    const adapter = window.TMUA_BROWSER = {status:{completed:0,total:45},error:'',hasPdf:() => false};
+    // Safari's embedded native PDF viewer does not reliably honour page fragments
+    // or scroll multi-page files on iOS/iPadOS (including desktop-site mode).
+    const appleTouch = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const adapter = window.TMUA_BROWSER = {status:{completed:0,total:45},error:'',hasPdf:() => false,requiresPdfImport:appleTouch || navigator.pdfViewerEnabled === false};
     try {
       const {PaperRepository} = await import('./browser-store.mjs');
       const response = await fetch('data/sources.json');

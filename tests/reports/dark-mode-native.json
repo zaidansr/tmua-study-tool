@@ -1,0 +1,32 @@
+{
+  "success": true,
+  "passed": [
+    "production native app opens new feature bundle with existing local PDFs",
+    "native readiness bypasses browser import adapter",
+    "light theme loads before native study controls",
+    "dark toggle changes the native app and saves preference",
+    "question renders with dark paper and readable inverted ink",
+    "desktop-dark fits with touch-sized controls",
+    "phone-dark fits with touch-sized controls",
+    "full-size question also follows dark theme",
+    "light toggle restores original question colors",
+    "phone-light fits with touch-sized controls",
+    "native dark preference survives a full app reload",
+    "native individual question renders through local PDF host",
+    "native checked attempt records correctness and time in history",
+    "native random mode opens a fresh random question without old feedback",
+    "native random wrong answer saves an eight-minute deadline and attempt history",
+    "native random mode reload preserves current feedback and exact review deadline",
+    "native stopping random mode restores practice navigation and retains schedule",
+    "native random study leaves other question histories unchanged",
+    "native test picker opens",
+    "native timed test stays on one complete paper",
+    "native active paper test disables random mode",
+    "native active test hides answer feedback and worked solutions",
+    "native submission marks all twenty questions with adjacent solution controls",
+    "native result review renders original question and worked solution",
+    "native app reload preserves completed state",
+    "native saved test remains in history after reload",
+    "native results and two question attempts persist without duplication"
+  ]
+}

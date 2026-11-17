@@ -1,5 +1,11 @@
 # Verification
 
+## Version 1.4.0 — Dark mode
+
+- 95 JavaScript test groups passed. Theme checks cover first-visit system preference, switching and reload persistence, blocked browser storage, cross-tab updates and retention of study data.
+- 27 production native-host checks passed, including light/dark appearance and question rendering, enlargement, 390px and desktop layouts, reload persistence, random-mode history and scheduling, timed-paper locks, all twenty marked results and original worked-solution review. See [the native theme report](tests/reports/dark-mode-native.json).
+- Six publication guards passed. The Windows build retains the existing `TMUAStudyTool` data location, and changing themes does not clear papers, histories or active tests.
+
 ## Phone and tablet update — 17 November 2026
 
 - 90 JavaScript test groups passed, including the iPad import fallback and a rendering-budget check for every question and solution region.

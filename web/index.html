@@ -6,14 +6,17 @@
   <meta name="theme-color" content="#ffffff">
   <meta name="description" content="Practise official TMUA past-paper questions individually, check your answers and study the original worked solutions.">
   <title>TMUA Question Bank</title>
+  <script src="theme.js"></script>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="test-mode.css">
+  <link rel="stylesheet" href="theme.css">
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to questions</a>
   <header class="site-header">
     <a class="brand" href="#" aria-label="TMUA question bank home"><span class="brand-mark" aria-hidden="true">∴</span><span>TMUA<span class="brand-sub">question bank</span></span></a>
     <nav class="nav" aria-label="Main navigation"><button class="nav-link active" id="practice-tab" type="button">Practice</button><button class="nav-link" id="random-tab" type="button">Random mode</button><button class="nav-link" id="test-tab" type="button">Test mode</button><button class="nav-link" id="sources-tab" type="button">Papers & sources</button></nav>
+    <button id="theme-toggle" class="theme-toggle" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M20.3 15.5A8.6 8.6 0 0 1 8.5 3.7 8.6 8.6 0 1 0 20.3 15.5Z"/></svg>Dark mode</button>
   </header>
   <div id="loading" class="loading-state" role="status"><p>Loading questions…</p></div>
   <main id="setup" class="loading-state" hidden>

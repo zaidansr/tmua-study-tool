@@ -9,10 +9,10 @@ internal sealed class MainWindow : Form
 {
     private readonly DesktopContext context;
     private readonly string startUrl;
-    private readonly WebView2 browser = new() { Dock = DockStyle.Fill, DefaultBackgroundColor = Color.FromArgb(251, 251, 247) };
-    private readonly Panel statePanel = new() { Dock = DockStyle.Fill, BackColor = Color.FromArgb(251, 251, 247) };
-    private readonly Label stateTitle = new() { AutoSize = false, ForeColor = Color.FromArgb(23, 51, 44), Font = new Font("Segoe UI", 22, FontStyle.Regular), TextAlign = ContentAlignment.MiddleLeft };
-    private readonly Label stateDetail = new() { AutoSize = false, ForeColor = Color.FromArgb(83, 104, 92), Font = new Font("Segoe UI", 11), TextAlign = ContentAlignment.TopLeft };
+    private readonly WebView2 browser = new() { Dock = DockStyle.Fill, DefaultBackgroundColor = Color.White };
+    private readonly Panel statePanel = new() { Dock = DockStyle.Fill, BackColor = Color.White };
+    private readonly Label stateTitle = new() { AutoSize = false, ForeColor = Color.FromArgb(23, 23, 23), Font = new Font("Segoe UI", 22, FontStyle.Regular), TextAlign = ContentAlignment.MiddleLeft };
+    private readonly Label stateDetail = new() { AutoSize = false, ForeColor = Color.FromArgb(96, 96, 96), Font = new Font("Segoe UI", 11), TextAlign = ContentAlignment.TopLeft };
     private readonly FlowLayoutPanel actions = new() { AutoSize = true, FlowDirection = FlowDirection.LeftToRight, WrapContents = true };
     private bool initialized;
     private readonly bool documentWindow;
@@ -31,7 +31,7 @@ internal sealed class MainWindow : Form
         StartPosition = FormStartPosition.Manual;
         Bounds = WindowPlacement.InitialBounds(workingArea,
             SizeFromClientSize(new Size(documentWindow ? 1100 : 1280, 900)));
-        BackColor = Color.FromArgb(251, 251, 247);
+        BackColor = Color.White;
         try { Icon = System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
         Controls.Add(browser);
         statePanel.Controls.Add(stateTitle);

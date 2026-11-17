@@ -1,0 +1,11 @@
+:root[data-theme="dark"]{color-scheme:dark;--ink:#efefef;--text:#dedede;--muted:#b0b0b0;--paper:#171717;--surface:#1e1e1e;--selected:#303030;--line:#464646;--accent:#efefef;--highlight:#383838}
+.theme-toggle{display:inline-flex;align-items:center;justify-content:center;gap:8px;margin-left:auto;min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:5px;background:var(--paper);color:var(--ink);font-size:13px;white-space:nowrap}
+.theme-toggle svg{width:18px;height:18px;flex-shrink:0}
+.theme-toggle[aria-pressed="true"]{background:var(--selected);border-color:var(--muted)}
+.theme-toggle:hover{background:var(--selected)}
+:root[data-theme="dark"] .pdf-region img,:root[data-theme="dark"] #zoom-image,:root[data-theme="dark"] .publisher-pdf{filter:invert(1) grayscale(1) contrast(.82)}
+@media(max-width:1023px){
+  .site-header .brand{order:1}
+  .site-header .theme-toggle{order:2}
+  .site-header .nav{order:3;width:100%;margin:0;justify-content:space-between}
+}

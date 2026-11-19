@@ -118,6 +118,23 @@ function createApp({progress,storage = {},hash = '',historyThrows = false,storag
 }
 const marked = (selected = 'A',bookmarked = false) => ({selected,marked:true,correct:true,bookmarked});
 const history = (h,id) => JSON.parse(JSON.stringify(id ? h.memory.list(id) : h.memory.all()));
+
+test('answer updates keep the existing question mounted in both Windows and browser hosts',() => {
+  const helper = production.slice(production.indexOf('  function updateQuestionMarkup('),production.indexOf('  function imageMarkup('));
+  for (const browser of [false,true]) {
+    const questionImage = {}, answerSection = {innerHTML:'old choices'}, tools = {innerHTML:'old tools'};
+    const mounted = new Map([['.question-images',questionImage],['.answer-section',answerSection],['.question-tools',tools]]);
+    const next = new Map([['.answer-section',{innerHTML:'new choices'}],['.question-tools',{innerHTML:'new tools'}]]);
+    let replacements = 0;
+    const workspace = {dataset:{questionId:'q1',view:'practice'},querySelector:selector=>mounted.get(selector)||null,set innerHTML(value){replacements++;mounted.clear();}};
+    const context = {window:browser?{TMUA_BROWSER:{}}:{},state:{view:'practice'},document:{createElement:()=>({content:{querySelector:selector=>next.get(selector)||null}})},workspace};
+    vm.createContext(context);vm.runInContext(helper+'\nupdateQuestionMarkup(workspace,"q1","updated question");',context);
+    assert.equal(workspace.querySelector('.question-images'),questionImage,`${browser?'browser':'Windows'} must retain the original question node`);
+    assert.equal(answerSection.innerHTML,'new choices');assert.equal(replacements,0);
+    vm.runInContext('updateQuestionMarkup(workspace,"q2","different question");',context);
+    assert.equal(replacements,1);assert.equal(workspace.dataset.questionId,'q2');
+  }
+});
 const smallFixture = (count) => { const data = fixture(); data.questions = data.questions.slice(0,count); return data; };
 const schedule = (h,id) => { const value = h.random.get(id); return value && JSON.parse(JSON.stringify(value)); };
 

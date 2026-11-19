@@ -4,6 +4,8 @@ A free study tool for practising TMUA questions, with official worked solutions,
 
 Use **Dark mode** in the header to switch themes. Your choice is saved on this device; the first visit follows your system setting. Questions, worked solutions and enlarged images follow the selected theme.
 
+Answer controls sit above the question and stay visible while you scroll through it. Selecting or checking an answer keeps the current question image mounted.
+
 ## Open in your browser
 
 Open [TMUA Study Tool](https://zaidansr.github.io/tmua-study-tool/). The website has a black-and-white interface with phone and tablet layouts. On browsers with a supported embedded PDF viewer, it displays the original publisher-hosted PDF at the relevant page, with answer checking, filters and progress.

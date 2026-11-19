@@ -89,7 +89,7 @@ button svg{pointer-events:none}
 .bank-summary{display:flex;align-items:center;gap:26px;border-top:1px solid var(--line);padding:17px 0 18px;font-size:11px;color:var(--muted)}
 .bank-summary strong{color:var(--ink);font-size:13px;font-weight:600;margin-right:4px}
 .source-shortcut{margin-left:auto}
-.question-card{background:var(--paper);border:1px solid var(--selected);border-radius:10px;overflow:hidden;box-shadow:0 3px 12px #2c2c2c03}
+.question-card{background:var(--paper);border:1px solid var(--selected);border-radius:10px;overflow:visible;box-shadow:0 3px 12px #2c2c2c03}
 .question-toolbar{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:20px 25px;border-bottom:1px solid var(--selected)}
 .question-meta{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
 .badge{font-size:10px;padding:4px 8px;border-radius:4px;background:var(--surface);color:var(--muted)}
@@ -528,4 +528,20 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,su
 @media(max-width:360px){
   .nav{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 16px;justify-content:stretch}
   .nav-link{text-align:left;white-space:normal}
+}
+
+/* Keep choices in reach without replacing or scrolling away from the question. */
+.answer-section{position:sticky;top:0;z-index:4;display:flex;align-items:center;flex-wrap:wrap;gap:8px 16px;margin:0 0 20px;padding:12px 0;border-top:0;border-bottom:1px solid var(--line);background:var(--paper)}
+.answer-section .answer-label{margin:0;font-size:11px}
+.answer-section .answer-options{gap:8px}
+.answer-section .answer-option{width:44px;height:44px}
+.answer-section .question-action-bar{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:0}
+.answer-section .button,.answer-section .reveal-button{font-size:13px;min-height:44px}
+.answer-section .feedback{flex-basis:100%;margin:0}
+@media(max-width:600px){
+  .answer-section{gap:8px;margin-bottom:16px;padding:10px 0}
+  .answer-section .answer-label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+  .answer-section .answer-options,.answer-section .question-action-bar{width:100%}
+  .answer-section .question-action-bar>.button{flex:1 1 0;padding:8px 10px;gap:6px}
+  .answer-section .reveal-button{flex:1 1 0;padding:8px 4px;line-height:1.3;text-align:center}
 }

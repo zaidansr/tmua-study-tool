@@ -1,5 +1,11 @@
 # Verification
 
+## Version 1.4.1 — Answer scrolling fix
+
+- 96 JavaScript test groups passed, including a regression check that answer updates retain the question node in both Windows and browser hosts while navigation still replaces it for a different question.
+- A live Windows preview using an isolated profile confirmed that selecting an answer while scrolled down retained the same loaded image and the exact scroll position (364px before and after). See [the captured scroll check](tests/reports/answer-scroll-native.json).
+- Practice and random-mode answer controls now precede the question image and stick to the viewport while reading. Timed-paper controls also precede the question and remain available during scrolling.
+
 ## Version 1.4.0 — Dark mode
 
 - 95 JavaScript test groups passed. Theme checks cover first-visit system preference, switching and reload persistence, blocked browser storage, cross-tab updates and retention of study data.

@@ -83,8 +83,13 @@
 .test-result-row-heading h2{font-size:16px}
 .test-result-summary{background:var(--surface)}
 .test-running-header{scroll-margin-top:12px}
+.test-answer-controls{position:sticky;top:96px;z-index:4;margin:0 0 20px;padding:12px 0;display:flex;align-items:center;flex-wrap:wrap;gap:8px 16px;border-top:0;border-bottom:1px solid var(--line);background:var(--paper)}
+.test-answer-controls>p{margin:0}
+.test-answer-controls>.text-button{margin:0}
+@media(max-width:800px){.test-answer-controls{top:84px}}
 .test-prev-next{flex-wrap:wrap}
 @media(max-width:600px){
+  .test-answer-controls{top:0;gap:8px;margin-bottom:16px}
   .test-shell{padding:20px 12px}
   .test-heading{align-items:flex-start;flex-wrap:wrap}
   .test-running-header{flex-wrap:wrap;position:static;padding:16px;gap:16px}

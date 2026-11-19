@@ -1,0 +1,10 @@
+{
+  "environment": "Windows production native host, isolated profile; click through Computer Use",
+  "questionId": "2016-p1-q16",
+  "control": "A",
+  "scrollBefore": 364,
+  "scrollAfter": 364,
+  "sameImageNode": true,
+  "imageLoaded": true,
+  "stickyAnswerControlsObserved": true
+}

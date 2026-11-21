@@ -6,14 +6,21 @@ const fs = require('node:fs');
 const path = require('node:path');
 const code = fs.readFileSync(path.join(__dirname,'../web/theme.js'),'utf8');
 function browser({saved,systemDark=false,denied=false}={}) {
-  const root={dataset:{}}, events={}, mediaEvents={}, buttonEvents={}, attributes={}, meta={};
+  const root={dataset:{}}, events={}, mediaEvents={}, buttonEvents={}, attributes={}, meta={}, messages=[];
   const storage=new Map(saved===undefined?[]:[['tmua-theme-v1',saved]]);
   const media={matches:systemDark,addEventListener:(name,fn)=>mediaEvents[name]=fn};
   const button={setAttribute:(name,value)=>attributes[name]=value,addEventListener:(name,fn)=>buttonEvents[name]=fn};
   const context={document:{documentElement:root,querySelector:()=>({setAttribute:(name,value)=>meta[name]=value}),getElementById:()=>button,addEventListener:(name,fn)=>events[name]=fn},window:{matchMedia:()=>media,addEventListener:(name,fn)=>events[name]=fn},localStorage:{getItem:key=>{if(denied)throw Error('denied');return storage.get(key);},setItem:(key,value)=>{if(denied)throw Error('denied');storage.set(key,value);}}};
   vm.runInNewContext(code,context);
-  return {root,storage,attributes,meta,ready:()=>events.DOMContentLoaded(),click:()=>buttonEvents.click(),system(value){media.matches=value;mediaEvents.change();},sync(key,newValue){events.storage({key,newValue});}};
+  context.window.chrome={webview:{postMessage:message=>messages.push(message)}};
+  return {root,storage,attributes,meta,messages,ready:()=>events.DOMContentLoaded(),click:()=>buttonEvents.click(),system(value){media.matches=value;mediaEvents.change();},sync(key,newValue){events.storage({key,newValue});}};
 }
+test('the resolved saved theme is shared with Windows startup and follows theme changes',()=>{
+  const h=browser({saved:'dark',systemDark:false});h.ready();
+  assert.equal(h.messages.at(-1).type,'theme-changed');assert.equal(h.messages.at(-1).theme,'dark');
+  h.click();assert.equal(h.messages.at(-1).theme,'light');
+  const next=browser({saved:h.storage.get('tmua-theme-v1'),systemDark:true});next.ready();assert.equal(next.messages.at(-1).theme,'light');
+});
 test('first visit follows system theme before controls load and responds to system changes',()=>{
   const h=browser({systemDark:true});assert.equal(h.root.dataset.theme,'dark');assert.equal(h.meta.content,'#171717');h.ready();assert.equal(h.attributes['aria-pressed'],'true');
   h.system(false);assert.equal(h.root.dataset.theme,'light');assert.equal(h.attributes['aria-pressed'],'false');

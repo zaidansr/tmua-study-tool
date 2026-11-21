@@ -18,7 +18,39 @@
     <nav class="nav" aria-label="Main navigation"><button class="nav-link active" id="practice-tab" type="button">Practice</button><button class="nav-link" id="random-tab" type="button">Random mode</button><button class="nav-link" id="test-tab" type="button">Test mode</button><button class="nav-link" id="sources-tab" type="button">Papers & sources</button></nav>
     <button id="theme-toggle" class="theme-toggle" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M20.3 15.5A8.6 8.6 0 0 1 8.5 3.7 8.6 8.6 0 1 0 20.3 15.5Z"/></svg>Dark mode</button>
   </header>
-  <div id="loading" class="loading-state" role="status"><p>Loading questions…</p></div>
+  <div id="loading" class="startup-loading" role="status" aria-live="polite" aria-busy="true">
+    <p class="sr-only">Loading TMUA. Preparing your questions…</p>
+    <div class="app-layout loading-layout" aria-hidden="true">
+      <aside class="sidebar">
+        <div class="sidebar-heading"><span class="sidebar-label">Filters</span><span class="loading-clear">Clear filters</span></div>
+        <div class="search-wrap"><div class="loading-field"><span class="skeleton-block loading-search-line"></span></div></div>
+        <div class="mobile-filter-toggle loading-collapse">Filters &amp; question list</div>
+        <div class="paper-filters"><div class="loading-label">Paper</div><div class="loading-field"><span class="skeleton-block loading-field-line"></span></div></div>
+        <div class="filter-label">Year<div class="loading-field"><span class="skeleton-block loading-field-line"></span></div></div>
+        <div class="filter-label">Topic<div class="loading-field"><span class="skeleton-block loading-field-line"></span></div></div>
+        <div class="filter-label">Progress<div class="loading-field"><span class="skeleton-block loading-field-line"></span></div></div>
+        <div class="results-heading"><h2>Questions <span class="skeleton-block loading-count"></span></h2><span class="skeleton-block loading-page"></span></div>
+        <div class="question-list loading-list">
+          <div class="loading-list-row"><span class="skeleton-block loading-list-number"></span><span><span class="skeleton-block loading-list-title"></span><span class="skeleton-block loading-list-topic"></span></span></div>
+          <div class="loading-list-row"><span class="skeleton-block loading-list-number"></span><span><span class="skeleton-block loading-list-title"></span><span class="skeleton-block loading-list-topic"></span></span></div>
+          <div class="loading-list-row"><span class="skeleton-block loading-list-number"></span><span><span class="skeleton-block loading-list-title"></span><span class="skeleton-block loading-list-topic"></span></span></div>
+          <div class="loading-list-row"><span class="skeleton-block loading-list-number"></span><span><span class="skeleton-block loading-list-title"></span><span class="skeleton-block loading-list-topic"></span></span></div>
+        </div>
+      </aside>
+      <div class="main-content">
+        <div class="bank-summary"><span><span class="skeleton-block loading-count"></span> questions</span><span><span class="skeleton-block loading-count"></span> papers</span><span><span class="skeleton-block loading-count"></span> attempted</span><span class="skeleton-block loading-shortcut"></span></div>
+        <article class="question-card">
+          <div class="question-toolbar"><div class="question-meta"><span class="skeleton-block loading-year"></span><span class="skeleton-block loading-paper"></span><span class="skeleton-block loading-question-number"></span></div><div class="question-tools"><span class="skeleton-block loading-timer"></span><span class="loading-save"><span class="skeleton-block"></span></span></div></div>
+          <div class="question-body">
+            <div class="topic-line"><span class="skeleton-block loading-topic"></span><span class="skeleton-block loading-paper-type"></span></div>
+            <div class="answer-section"><p class="answer-label">YOUR ANSWER</p><div class="answer-options"><span class="skeleton-block loading-choice"></span><span class="skeleton-block loading-choice"></span><span class="skeleton-block loading-choice"></span><span class="skeleton-block loading-choice"></span><span class="skeleton-block loading-choice"></span><span class="skeleton-block loading-choice"></span></div><div class="question-action-bar"><span class="skeleton-block loading-check"></span><span class="skeleton-block loading-solution"></span></div></div>
+            <div class="loading-question-content"><div class="loading-intro"><span class="skeleton-block loading-q-number"></span><span class="skeleton-block loading-paragraph"></span></div><span class="skeleton-block loading-paragraph loading-long"></span><span class="skeleton-block loading-paragraph loading-medium"></span><span class="skeleton-block loading-paragraph loading-long"></span><div class="loading-option-rows"><div><span class="skeleton-block"></span><span class="skeleton-block"></span></div><div><span class="skeleton-block"></span><span class="skeleton-block"></span></div><div><span class="skeleton-block"></span><span class="skeleton-block"></span></div><div><span class="skeleton-block"></span><span class="skeleton-block"></span></div></div></div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </div>
+
   <main id="setup" class="loading-state" hidden>
     <h1>Download the papers</h1>
     <p>Download 45 original official PDFs for personal study. Once downloaded, questions and worked solutions work offline.</p>

@@ -11,15 +11,18 @@ internal sealed class DesktopContext
     internal PaperStore Papers { get; private set; } = null!;
     internal bool ContentReady { get; private set; }
 
-    internal Task<(string ContentPath, CoreWebView2Environment Environment)> PrepareAsync() =>
-        preparation ??= PrepareCoreAsync();
+    internal Task<(string ContentPath, CoreWebView2Environment Environment)> PrepareAsync(IProgress<string>? progress = null) =>
+        preparation ??= PrepareCoreAsync(progress);
 
-    private async Task<(string, CoreWebView2Environment)> PrepareCoreAsync()
+    private async Task<(string, CoreWebView2Environment)> PrepareCoreAsync(IProgress<string>? progress)
     {
+        progress?.Report("Preparing the question bank…");
         string content = await Task.Run(ContentBundle.Prepare);
         Papers = new PaperStore(Path.Combine(content, "data", "sources.json"), AppPaths.Papers);
+        progress?.Report("Checking your downloaded papers…");
         ContentReady = await Papers.IsReadyAsync();
         Directory.CreateDirectory(AppPaths.WebViewData);
+        progress?.Report("Opening your study workspace…");
         // A stable virtual HTTPS origin and profile retain localStorage across app updates.
         var environment = await CoreWebView2Environment.CreateAsync(null, AppPaths.WebViewData);
         AppLog.Write("WebView2 runtime " + environment.BrowserVersionString);

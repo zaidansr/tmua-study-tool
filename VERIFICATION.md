@@ -1,5 +1,13 @@
 # Verification
 
+## Version 1.4.2 — Skeleton startup loading
+
+- 98 JavaScript test groups passed. Startup checks verify the ready signal is sent after the questions, first-run download screen, or either startup error screen becomes visible. Theme checks also cover forwarding the resolved saved appearance to Windows startup.
+- The Windows shell displays a monochrome skeleton with shimmer during archive preparation, paper checks and workspace loading. It waits for the web app's ready signal rather than dismissing the loading view solely on page navigation completion. Error views stop the loading animation.
+- An isolated native startup reached the question view, with the skeleton visible during preparation and hidden once the page reported ready. The native skeleton was also rendered and visually checked. See [the native startup report](tests/reports/startup-native.json).
+- The skeleton follows the actual practice screen structure. Native appearance preference round trips and both light/dark native renders were checked in an isolated profile.
+- Six publication guards passed. Web shimmer respects `prefers-reduced-motion`; native shimmer respects Windows UI effects. No minimum loading delay is added to the shipped app.
+
 ## Version 1.4.1 — Answer scrolling fix
 
 - 96 JavaScript test groups passed, including a regression check that answer updates retain the question node in both Windows and browser hosts while navigation still replaces it for a different question.

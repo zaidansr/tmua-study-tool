@@ -119,6 +119,21 @@ function createApp({progress,storage = {},hash = '',historyThrows = false,storag
 const marked = (selected = 'A',bookmarked = false) => ({selected,marked:true,correct:true,bookmarked});
 const history = (h,id) => JSON.parse(JSON.stringify(id ? h.memory.list(id) : h.memory.all()));
 
+test('startup releases the native loading screen for questions, first-run setup and errors',() => {
+  const cases = [
+    [createApp(),'app'],
+    [createApp({contentReady:false}),'setup'],
+    [createApp({data:{questions:[],papers:[]},allowError:true}),'error'],
+    [createApp({browser:{error:'Source list unavailable'},allowError:true}),'error']
+  ];
+  for (const [h,surface] of cases) {
+    assert.equal(h.window.TMUA_UI_READY,true);
+    assert.equal(h.get(surface).hidden,false);
+    assert.equal(h.get('loading').hidden,true);
+    assert.equal(h.messages.filter(message=>message.type==='app-ready').length,1);
+  }
+});
+
 test('answer updates keep the existing question mounted in both Windows and browser hosts',() => {
   const helper = production.slice(production.indexOf('  function updateQuestionMarkup('),production.indexOf('  function imageMarkup('));
   for (const browser of [false,true]) {
@@ -587,7 +602,8 @@ test('corrupted v2 entries are isolated and startup errors show a recoverable er
 
 test('first-run download is explicit, progress updates, failure retries and success reloads',() => {
   const h = createApp({contentReady:false});
-  assert.equal(h.get('setup').hidden,false); assert.equal(h.get('loading').hidden,true); assert.equal(h.get('app').hidden,true); assert.equal(h.messages.length,0);
+  assert.equal(h.get('setup').hidden,false); assert.equal(h.get('loading').hidden,true); assert.equal(h.get('app').hidden,true);
+  assert.equal(h.messages[0].type,'app-ready'); h.messages.length = 0;
   h.click('download-papers'); assert.equal(h.messages.length,1); assert.equal(h.messages[0].type,'download-papers'); assert.equal(h.get('download-papers').disabled,true);
   h.window.tmuaDownloadProgress({state:'downloading',completed:12,total:45,message:'Downloaded 12 of 45'});
   assert.equal(h.get('download-progress').value,12); assert.equal(h.get('download-progress').max,45); assert.equal(h.get('download-status').textContent,'Downloaded 12 of 45');

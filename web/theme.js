@@ -10,6 +10,7 @@
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content',dark ? '#171717' : '#ffffff');
     const button = document.getElementById('theme-toggle');
     if (button) button.setAttribute('aria-pressed',String(dark));
+    window.chrome?.webview?.postMessage({type:'theme-changed',theme:dark ? 'dark' : 'light'});
   }
   apply();
   document.addEventListener('DOMContentLoaded',() => {

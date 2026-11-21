@@ -2,6 +2,10 @@
 
 (() => {
   const $ = (id) => document.getElementById(id);
+  function announceReady() {
+    window.TMUA_UI_READY = true;
+    window.chrome?.webview?.postMessage({type:'app-ready'});
+  }
   const STORAGE_KEY = 'tmua-question-bank-progress-v1';
   const LAST_QUESTION_KEY = 'tmua-question-bank-last-question-v1';
   const RESET_KEY = 'tmua-question-bank-reset-v2';
@@ -481,7 +485,7 @@
   async function initialize() {
     if (window.TMUA_BOOT) await window.TMUA_BOOT;
     if (window.TMUA_BROWSER && !window.TMUA_BROWSER.repository) {
-      $('loading').hidden = true; $('error').hidden = false; $('error-detail').textContent = window.TMUA_BROWSER.error || 'The source list could not load. Reload this page to try again.'; return;
+      $('loading').hidden = true; $('error').hidden = false; $('error-detail').textContent = window.TMUA_BROWSER.error || 'The source list could not load. Reload this page to try again.'; announceReady(); return;
     }
     if (window.TMUA_CONTENT_READY === false) {
       $('loading').hidden = true; $('setup').hidden = false;
@@ -497,6 +501,7 @@
         if (update.state === 'complete') location.reload();
         if (update.state === 'error') { download.disabled = false; download.textContent = 'Retry download'; }
       };
+      announceReady();
       return;
     }
     try {
@@ -562,9 +567,11 @@
       if (testController && $('test-view').querySelector('#test-results')) { pauseTimer(); showView('test'); }
       else if (!testController?.isActive() && randomSession().active === true) startRandomMode({resume:true});
       $('loading').hidden = true; $('app').hidden = false;
+      announceReady();
     } catch (error) {
       $('loading').hidden = true; $('error').hidden = false;
       $('error-detail').textContent = location.protocol === 'file:' ? `The local question data could not load. Keep index.html alongside the data and assets folders, then reopen it. ${error.message}` : `Please close and reopen the app. ${error.message}`;
+      announceReady();
     }
   }
   initialize();

@@ -1,0 +1,17 @@
+[
+  {
+    "phase": "loading",
+    "skeletonVisible": true
+  },
+  {
+    "phase": "ready",
+    "skeletonVisible": false,
+    "nativeTheme": "dark",
+    "page": {
+      "errorVisible": false,
+      "questionsVisible": true,
+      "ready": true,
+      "theme": "dark"
+    }
+  }
+]

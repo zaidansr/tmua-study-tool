@@ -14,6 +14,8 @@ internal sealed class MainWindow : Form
     private readonly Label stateTitle = new() { AutoSize = false, ForeColor = Color.FromArgb(23, 23, 23), Font = new Font("Segoe UI", 22, FontStyle.Regular), TextAlign = ContentAlignment.MiddleLeft };
     private readonly Label stateDetail = new() { AutoSize = false, ForeColor = Color.FromArgb(96, 96, 96), Font = new Font("Segoe UI", 11), TextAlign = ContentAlignment.TopLeft };
     private readonly FlowLayoutPanel actions = new() { AutoSize = true, FlowDirection = FlowDirection.LeftToRight, WrapContents = true };
+    private readonly StartupSkeleton startupSkeleton = new();
+    private bool startupFailed;
     private bool initialized;
     private readonly bool documentWindow;
     private readonly CancellationTokenSource lifetime = new();
@@ -25,25 +27,32 @@ internal sealed class MainWindow : Form
         this.context = context;
         this.startUrl = startUrl;
         this.documentWindow = documentWindow;
+        ApplyStartupTheme(AppTheme.IsDark());
         Text = documentWindow ? DocumentTitles.FromUri(startUrl) : "TMUA Study Tool";
         Rectangle workingArea = Screen.FromPoint(Cursor.Position).WorkingArea;
         MinimumSize = WindowPlacement.MinimumSize(workingArea);
         StartPosition = FormStartPosition.Manual;
         Bounds = WindowPlacement.InitialBounds(workingArea,
             SizeFromClientSize(new Size(documentWindow ? 1100 : 1280, 900)));
-        BackColor = Color.White;
+        BackColor = statePanel.BackColor;
         try { Icon = System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
         Controls.Add(browser);
         statePanel.Controls.Add(stateTitle);
         statePanel.Controls.Add(stateDetail);
         statePanel.Controls.Add(actions);
+        statePanel.Controls.Add(startupSkeleton);
+        startupSkeleton.Dock = DockStyle.Fill;
+        startupSkeleton.BringToFront();
+        stateTitle.Visible = false;
+        stateDetail.Visible = false;
+        actions.Visible = false;
         Controls.Add(statePanel);
         statePanel.BringToFront();
         statePanel.Resize += (_, _) => LayoutState();
         Shown += async (_, _) => await InitializeBrowserAsync();
         FormClosed += (_, _) => { lifetime.Cancel(); browser.Dispose(); };
-        stateTitle.Text = "Opening TMUA…";
-        stateDetail.Text = "Opening your study tool…";
+        stateTitle.Text = "Loading TMUA";
+        stateDetail.Text = "Preparing your questions…";
         LayoutState();
     }
 
@@ -51,8 +60,9 @@ internal sealed class MainWindow : Form
     {
         int left = Math.Max(40, (statePanel.ClientSize.Width - 680) / 2);
         int top = Math.Max(50, statePanel.ClientSize.Height / 3 - 40);
-        stateTitle.SetBounds(left, top, Math.Max(200, statePanel.ClientSize.Width - 2 * left), 70);
-        stateDetail.SetBounds(left, top + 80, Math.Max(200, statePanel.ClientSize.Width - 2 * left), 150);
+        int titleLeft = left;
+        stateTitle.SetBounds(titleLeft, top, Math.Max(200, statePanel.ClientSize.Width - left - titleLeft), 70);
+        stateDetail.SetBounds(titleLeft, top + 80, Math.Max(200, statePanel.ClientSize.Width - left - titleLeft), 150);
         actions.Location = new Point(left, top + 240);
         actions.MaximumSize = new Size(Math.Max(200, statePanel.ClientSize.Width - 2 * left), 0);
     }
@@ -63,10 +73,13 @@ internal sealed class MainWindow : Form
         initialized = true;
         try
         {
-            var prepared = await context.PrepareAsync();
+            var progress = new Progress<string>(message => { if (!IsDisposed && !startupFailed) { stateDetail.Text = message; startupSkeleton.StatusText = message; } });
+            var prepared = await context.PrepareAsync(progress);
             if (IsDisposed) return;
             await browser.EnsureCoreWebView2Async(prepared.Environment);
             if (IsDisposed) return;
+            stateDetail.Text = "Loading questions and saved progress…";
+            startupSkeleton.StatusText = stateDetail.Text;
             var core = browser.CoreWebView2;
             core.SetVirtualHostNameToFolderMapping(DesktopContext.HostName, prepared.ContentPath,
                 CoreWebView2HostResourceAccessKind.DenyCors);
@@ -89,12 +102,19 @@ internal sealed class MainWindow : Form
                 AppLog.Write("WebView2 process failed: " + e.ProcessFailedKind);
                 ShowError("The app view stopped unexpectedly.", "Close and reopen the app. Your saved progress is kept on this device.");
             };
-            core.NavigationCompleted += (_, e) =>
+            core.NavigationCompleted += async (_, e) =>
             {
                 if (e.IsSuccess)
                 {
-                    statePanel.Visible = false;
-                    browser.Focus();
+                    // Navigation alone can finish before the app's async startup.
+                    // Document windows use the built-in PDF viewer instead.
+                    if (documentWindow) CompleteStartup();
+                    else
+                    {
+                        try { if (await core.ExecuteScriptAsync("window.TMUA_UI_READY === true") == "true") CompleteStartup(); }
+                        catch (Exception exception) when (exception is ObjectDisposedException or InvalidOperationException or System.Runtime.InteropServices.COMException)
+                        { AppLog.Write("Could not check app readiness", exception); }
+                    }
                 }
                 else if (e.WebErrorStatus != CoreWebView2WebErrorStatus.OperationCanceled)
                 {
@@ -117,6 +137,25 @@ internal sealed class MainWindow : Form
         }
     }
 
+    private void CompleteStartup()
+    {
+        if (IsDisposed || startupFailed) return;
+        startupSkeleton.Visible = false;
+        statePanel.Visible = false;
+        browser.Focus();
+    }
+
+    private void ApplyStartupTheme(bool dark)
+    {
+        var background = dark ? Color.FromArgb(23,23,23) : Color.White;
+        statePanel.BackColor = background;
+        BackColor = background;
+        browser.DefaultBackgroundColor = background;
+        stateTitle.ForeColor = dark ? Color.FromArgb(239,239,239) : Color.FromArgb(23,23,23);
+        stateDetail.ForeColor = dark ? Color.FromArgb(176,176,176) : Color.FromArgb(96,96,96);
+        startupSkeleton.DarkMode = dark;
+    }
+
     private async Task UpdateReadinessScriptAsync()
     {
         var core = browser.CoreWebView2;
@@ -127,14 +166,22 @@ internal sealed class MainWindow : Form
 
     private async void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
     {
-        if (downloadRunning || IsDisposed || !Uri.TryCreate(e.Source, UriKind.Absolute, out Uri? source) ||
+        if (IsDisposed || !Uri.TryCreate(e.Source, UriKind.Absolute, out Uri? source) ||
             source.Scheme != Uri.UriSchemeHttps || !source.IsDefaultPort ||
             !source.Host.Equals(DesktopContext.HostName, StringComparison.OrdinalIgnoreCase) || source.AbsolutePath != "/index.html") return;
         try
         {
             if (e.WebMessageAsJson.Length > 2048) return;
             using JsonDocument message = JsonDocument.Parse(e.WebMessageAsJson);
-            if (!message.RootElement.TryGetProperty("type", out JsonElement type) || type.GetString() != "download-papers") return;
+            if (!message.RootElement.TryGetProperty("type", out JsonElement type)) return;
+            if (type.GetString() == "theme-changed")
+            {
+                if (message.RootElement.TryGetProperty("theme", out var theme) && theme.ValueKind == JsonValueKind.String && theme.GetString() is string value && value is "dark" or "light")
+                { AppTheme.Save(value); ApplyStartupTheme(value == "dark"); }
+                return;
+            }
+            if (type.GetString() == "app-ready") { CompleteStartup(); return; }
+            if (type.GetString() != "download-papers" || downloadRunning) return;
             downloadRunning = true;
             var progress = new Progress<DownloadProgress>(state =>
             {
@@ -192,6 +239,11 @@ internal sealed class MainWindow : Form
     private void ShowError(string title, string detail, bool runtimeMissing = false)
     {
         if (IsDisposed) return;
+        startupFailed = true;
+        startupSkeleton.Visible = false;
+        stateTitle.Visible = true;
+        stateDetail.Visible = true;
+        actions.Visible = true;
         stateTitle.Text = title;
         stateTitle.Font = new Font("Segoe UI", 18, FontStyle.Regular);
         stateDetail.Text = detail;

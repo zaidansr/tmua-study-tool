@@ -6,6 +6,8 @@ Use **Dark mode** in the header to switch themes. Your choice is saved on this d
 
 Answer controls sit above the question and stay visible while you scroll through it. Selecting or checking an answer keeps the current question image mounted.
 
+Startup mirrors the study screen with a shimmering skeleton of its header, filters, question list, question card and answer bar. It uses your saved light/dark appearance and clears as soon as the study view is ready. Reduced-motion settings disable the animation.
+
 ## Open in your browser
 
 Open [TMUA Study Tool](https://zaidansr.github.io/tmua-study-tool/). The website has a black-and-white interface with phone and tablet layouts. On browsers with a supported embedded PDF viewer, it displays the original publisher-hosted PDF at the relevant page, with answer checking, filters and progress.

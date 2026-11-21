@@ -1,12 +1,7 @@
 # TMUA Study Tool
 
-A free study tool for practising TMUA questions, with official worked solutions, topic and year filters, bookmarks, a timer and saved progress. Use it in a browser or download the Windows app. No account is required.
+A free study tool for practising TMUA questions, with official worked solutions, topic and year filters, bookmarks, a timer and saved progress. Use it in a browser or download the Windows app. No account is required. I created this 1. to aid me in studying for TMUA, but also leanr about UI/UX design. I tested the app myself, found stuff that I found inconvenient and replaced, added skeleton loader, etc. 
 
-Use **Dark mode** in the header to switch themes. Your choice is saved on this device; the first visit follows your system setting. Questions, worked solutions and enlarged images follow the selected theme.
-
-Answer controls sit above the question and stay visible while you scroll through it. Selecting or checking an answer keeps the current question image mounted.
-
-Startup mirrors the study screen with a shimmering skeleton of its header, filters, question list, question card and answer bar. It uses your saved light/dark appearance and clears as soon as the study view is ready. Reduced-motion settings disable the animation.
 
 ## Open in your browser
 

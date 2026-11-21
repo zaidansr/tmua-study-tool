@@ -119,6 +119,14 @@ function createApp({progress,storage = {},hash = '',historyThrows = false,storag
 const marked = (selected = 'A',bookmarked = false) => ({selected,marked:true,correct:true,bookmarked});
 const history = (h,id) => JSON.parse(JSON.stringify(id ? h.memory.list(id) : h.memory.all()));
 
+test('mobile filters expand the actual sidebar instead of the loading skeleton',() => {
+  const h=createApp(), placeholder=h.document.querySelector('.sidebar'), sidebar=h.get('question-sidebar');
+  assert.notEqual(placeholder,sidebar);
+  h.click('mobile-filter-toggle');assert.equal(sidebar.classList.contains('expanded'),true);
+  assert.equal(placeholder.classList.contains('expanded'),false);assert.equal(h.get('mobile-filter-toggle').getAttribute('aria-expanded'),'true');
+  h.click('mobile-filter-toggle');assert.equal(sidebar.classList.contains('expanded'),false);
+});
+
 test('startup releases the native loading screen for questions, first-run setup and errors',() => {
   const cases = [
     [createApp(),'app'],

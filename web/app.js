@@ -3,6 +3,7 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   function announceReady() {
+    $('loading').innerHTML = '';
     window.TMUA_UI_READY = true;
     window.chrome?.webview?.postMessage({type:'app-ready'});
   }
@@ -436,7 +437,7 @@
     if (meta.importedAt) { const d = new Date(meta.importedAt); $('import-date').textContent = Number.isNaN(d.getTime()) ? `Archive imported: ${meta.importedAt}` : `Archive imported ${d.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}.`; }
   }
   function bindEvents() {
-    $('mobile-filter-toggle').addEventListener('click', (e) => { const expanded = document.querySelector('.sidebar').classList.toggle('expanded'); e.currentTarget.setAttribute('aria-expanded',String(expanded)); });
+    $('mobile-filter-toggle').addEventListener('click', (e) => { const expanded = $('question-sidebar').classList.toggle('expanded'); e.currentTarget.setAttribute('aria-expanded',String(expanded)); });
     $('search').addEventListener('input', (e) => { state.filters.search = e.target.value; applyFilters(); });
     ['year','topic','status'].forEach((name) => $(`${name}-filter`).addEventListener('change', (e) => { state.filters[name] = e.target.value; applyFilters(); }));
     $('paper-filter').addEventListener('click', (e) => { const button = e.target.closest('[data-paper]'); if (!button) return; state.filters.paper = button.dataset.paper; document.querySelectorAll('[data-paper]').forEach((b) => { const selected = b === button; b.classList.toggle('selected',selected); b.setAttribute('aria-pressed',String(selected)); }); applyFilters(); });

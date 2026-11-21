@@ -87,13 +87,23 @@ internal sealed class StartupSkeleton : Control
         Block(bodyX+20,questionY,22,24);Block(bodyX+88,questionY,bodyW*.70f,22);
         for(int i=1;i<4;i++)Block(bodyX+88,questionY+i*70,bodyW*(i%2==0?.67f:.86f),22);
         for(int i=0;i<5;i++){float y=questionY+280+i*60;Block(bodyX+88,y,18,22);Block(bodyX+140,y,140+i%2*36,22);}
-        using(var brush=new SolidBrush(fill))foreach(var block in blocks)g.FillRectangle(brush,block);
+        using(var brush=new SolidBrush(fill))foreach(var block in blocks){using var path=RoundedBlock(block);g.FillPath(brush,path);}
         if(!SystemInformation.UIEffectsEnabled)return;
         float sweepWidth=Math.Max(100,width/3), sweepX=(width+sweepWidth)*frame/60-sweepWidth;
         var sweep=new RectangleF(sweepX,0,sweepWidth,Height);
         using var shimmer=new LinearGradientBrush(sweep,Color.Transparent,Color.White,0f);
         shimmer.InterpolationColors=new ColorBlend{Positions=[0f,.5f,1f],Colors=[Color.Transparent,Color.FromArgb(DarkMode?24:180,255,255,255),Color.Transparent]};
-        foreach(var block in blocks){g.SetClip(block);g.FillRectangle(shimmer,sweep);g.ResetClip();}
+        foreach(var block in blocks){using var path=RoundedBlock(block);g.SetClip(path);g.FillRectangle(shimmer,sweep);g.ResetClip();}
+    }
+    private static GraphicsPath RoundedBlock(RectangleF bounds)
+    {
+        float d=Math.Min(12,Math.Min(bounds.Width,bounds.Height));
+        var path=new GraphicsPath();
+        path.AddArc(bounds.Left,bounds.Top,d,d,180,90);
+        path.AddArc(bounds.Right-d,bounds.Top,d,d,270,90);
+        path.AddArc(bounds.Right-d,bounds.Bottom-d,d,d,0,90);
+        path.AddArc(bounds.Left,bounds.Bottom-d,d,d,90,90);
+        path.CloseFigure();return path;
     }
     protected override void Dispose(bool disposing)
     {
